@@ -5,15 +5,15 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_URL;
+  const supabaseSecretKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL.");
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_PUBLIC_URL.");
   }
 
   if (!supabaseSecretKey) {
-    throw new Error("Missing SUPABASE_SECRET_KEY.");
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY.");
   }
 
   return createClient<Database>(supabaseUrl, supabaseSecretKey, {
