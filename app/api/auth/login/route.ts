@@ -5,7 +5,22 @@ import { loginSchema } from "@/lib/validations/auth.validation";
 
 export async function POST(request: Request) {
   try {
-    const body: unknown = await request.json();
+    let body: unknown;
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "INVALID_JSON",
+            message: "The request body must contain valid JSON.",
+          },
+        },
+        { status: 400 },
+      );
+    }
 
     const result = loginSchema.safeParse(body);
 
@@ -41,6 +56,19 @@ export async function POST(request: Request) {
             },
           },
           { status: 429 },
+        );
+      }
+
+      if (error?.code === "email_not_confirmed") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "EMAIL_NOT_VERIFIED",
+              message: "Please verify your email before signing in.",
+            },
+          },
+          { status: 403 },
         );
       }
 

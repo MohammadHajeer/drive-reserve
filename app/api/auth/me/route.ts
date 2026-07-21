@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { updateProfileSchema } from "@/lib/validations/auth.validation";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,146 @@ export async function GET() {
           "Cache-Control": "private, no-store",
         },
       },
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    let body: unknown;
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "INVALID_JSON",
+            message: "The request body must contain valid JSON.",
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    const parsed = updateProfileSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Please check the submitted information.",
+            fieldErrors: parsed.error.flatten().fieldErrors,
+            formErrors: parsed.error.flatten().formErrors,
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    const supabase = await createClient();
+
+    const { data: claimsData, error: claimsError } =
+      await supabase.auth.getClaims();
+
+    const claims = claimsData?.claims as DriveReserveClaims | undefined;
+
+    if (claimsError || !claims?.sub) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHENTICATED",
+            message: "Authentication is required.",
+          },
+        },
+        { status: 401 },
+      );
+    }
+
+    if (claims.user_role !== "customer") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "Customer access is required.",
+          },
+        },
+        { status: 403 },
+      );
+    }
+
+    const updates: {
+      full_name?: string;
+      phone?: string | null;
+    } = {};
+
+    if (parsed.data.fullName !== undefined) {
+      updates.full_name = parsed.data.fullName;
+    }
+
+    if (parsed.data.phone !== undefined) {
+      updates.phone = parsed.data.phone === "" ? null : parsed.data.phone;
+    }
+
+    const { data: profile, error: updateError } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", claims.sub)
+      .select("id, full_name, phone, role, updated_at")
+      .single();
+
+    if (updateError || !profile) {
+      console.error("Customer profile update error:", updateError);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "PROFILE_UPDATE_FAILED",
+            message: "Unable to update your profile.",
+          },
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          profile: {
+            id: profile.id,
+            fullName: profile.full_name,
+            phone: profile.phone,
+            role: profile.role,
+            updatedAt: profile.updated_at,
+          },
+        },
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, no-store",
+        },
+      },
+    );
+  } catch (error) {
+    console.error("Customer profile route error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An unexpected error occurred.",
+        },
+      },
+      { status: 500 },
     );
   }
 }
