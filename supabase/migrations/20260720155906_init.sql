@@ -69,18 +69,23 @@ create table public.profiles (
 
 create table public.cars (
   id uuid primary key default gen_random_uuid(),
+
   brand text not null,
   model text not null,
   year integer not null,
   plate_number text not null,
   color text not null,
   category text not null,
+
   transmission text not null,
   fuel_type text not null,
   seats smallint not null,
+
   price_per_day numeric(10, 2) not null,
   description text,
+
   status public.car_status not null default 'available',
+  
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
