@@ -1,34 +1,23 @@
-import { NextResponse } from "next/server";
+import "server-only";
+
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 
 const carIdSchema = z.uuid();
 
-export async function GET(
-  _request: Request,
-  context: {
-    params: Promise<{
-      id: string;
-    }>;
-  },
-) {
+export async function getPublicCarById(id: string) {
   try {
-    const { id } = await context.params;
-
     const parsedId = carIdSchema.safeParse(id);
 
     if (!parsedId.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_CAR_ID",
-            message: "The provided car ID is invalid.",
-          },
+      return {
+        success: false,
+        error: {
+          code: "INVALID_CAR_ID",
+          message: "The provided car ID is invalid.",
         },
-        { status: 400 },
-      );
+      };
     }
 
     const supabase = await createClient();
@@ -66,29 +55,23 @@ export async function GET(
     if (error) {
       console.error("Car details error:", error);
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "CAR_LOAD_FAILED",
-            message: "Unable to load the car.",
-          },
+      return {
+        success: false,
+        error: {
+          code: "CAR_LOAD_FAILED",
+          message: "Unable to load the car.",
         },
-        { status: 500 },
-      );
+      };
     }
 
     if (!car) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "CAR_NOT_FOUND",
-            message: "The requested car was not found.",
-          },
+      return {
+        success: false,
+        error: {
+          code: "CAR_NOT_FOUND",
+          message: "The requested car was not found.",
         },
-        { status: 404 },
-      );
+      };
     }
 
     const images = Array.isArray(car.car_images)
@@ -105,7 +88,7 @@ export async function GET(
           }))
       : [];
 
-    return NextResponse.json({
+    return {
       success: true,
       data: {
         car: {
@@ -126,19 +109,16 @@ export async function GET(
           updatedAt: car.updated_at,
         },
       },
-    });
+    };
   } catch (error) {
-    console.error("Car details route error:", error);
+    console.error("Car details load error:", error);
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred.",
-        },
+    return {
+      success: false,
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred.",
       },
-      { status: 500 },
-    );
+    };
   }
 }

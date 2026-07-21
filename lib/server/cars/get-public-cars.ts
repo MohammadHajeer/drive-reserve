@@ -1,7 +1,20 @@
-import { type NextRequest, NextResponse } from "next/server";
+import "server-only";
+
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
+
+export type PublicCarsSearchParams = {
+  search?: string | string[];
+  category?: string | string[];
+  transmission?: string | string[];
+  seats?: string | string[];
+  minPrice?: string | string[];
+  maxPrice?: string | string[];
+  sort?: string | string[];
+  page?: string | string[];
+  limit?: string | string[];
+};
 
 const categories = [
   "economy",
@@ -54,24 +67,39 @@ const querySchema = z
     }
   });
 
-function getListParameter(
-  searchParams: URLSearchParams,
-  name: string,
-): string[] {
-  return searchParams
-    .getAll(name)
-    .flatMap((value) => value.split(","))
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
+function getSingleParameter(
+  searchParams: PublicCarsSearchParams,
+  name: keyof PublicCarsSearchParams,
+): string | undefined {
+  const parameter = searchParams[name];
+
+  return Array.isArray(parameter) ? parameter[0] : parameter;
 }
 
 function getOptionalParameter(
-  searchParams: URLSearchParams,
-  name: string,
+  searchParams: PublicCarsSearchParams,
+  name: keyof PublicCarsSearchParams,
 ): string | undefined {
-  const value = searchParams.get(name)?.trim();
+  const value = getSingleParameter(searchParams, name)?.trim();
 
-  return value ? value : undefined;
+  return value || undefined;
+}
+
+function getListParameter(
+  searchParams: PublicCarsSearchParams,
+  name: keyof PublicCarsSearchParams,
+): string[] {
+  const parameter = searchParams[name];
+  const values = Array.isArray(parameter)
+    ? parameter
+    : parameter === undefined
+      ? []
+      : [parameter];
+
+  return values
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 const categoryLabels: Record<(typeof categories)[number], string> = {
@@ -106,34 +134,31 @@ const sortOptions = {
   },
 } as const;
 
-export async function GET(request: NextRequest) {
+export async function getPublicCars(
+  searchParams: PublicCarsSearchParams,
+) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-
     const parsed = querySchema.safeParse({
-      search: searchParams.get("search") ?? "",
+      search: getSingleParameter(searchParams, "search") ?? "",
       categories: getListParameter(searchParams, "category"),
       transmissions: getListParameter(searchParams, "transmission"),
       seatGroups: getListParameter(searchParams, "seats"),
       minPrice: getOptionalParameter(searchParams, "minPrice"),
       maxPrice: getOptionalParameter(searchParams, "maxPrice"),
-      sort: searchParams.get("sort") ?? "price-asc",
-      page: searchParams.get("page") ?? "1",
-      limit: searchParams.get("limit") ?? "6",
+      sort: getSingleParameter(searchParams, "sort") ?? "price-asc",
+      page: getSingleParameter(searchParams, "page") ?? "1",
+      limit: getSingleParameter(searchParams, "limit") ?? "6",
     });
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_QUERY_PARAMETERS",
-            message: "Please check the selected filters.",
-            fieldErrors: parsed.error.flatten().fieldErrors,
-          },
+      return {
+        success: false,
+        error: {
+          code: "INVALID_QUERY_PARAMETERS",
+          message: "Please check the selected filters.",
+          fieldErrors: parsed.error.flatten().fieldErrors,
         },
-        { status: 400 },
-      );
+      };
     }
 
     const {
@@ -249,16 +274,13 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Cars listing error:", error);
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "CARS_LOAD_FAILED",
-            message: "Unable to load the available cars.",
-          },
+      return {
+        success: false,
+        error: {
+          code: "CARS_LOAD_FAILED",
+          message: "Unable to load the available cars.",
         },
-        { status: 500 },
-      );
+      };
     }
 
     const cars = (data ?? []).map((car) => {
@@ -295,7 +317,7 @@ export async function GET(request: NextRequest) {
 
     const total = count ?? 0;
 
-    return NextResponse.json({
+    return {
       success: true,
       data: {
         cars,
@@ -308,19 +330,16 @@ export async function GET(request: NextRequest) {
           hasPreviousPage: page > 1,
         },
       },
-    });
+    };
   } catch (error) {
-    console.error("Cars route error:", error);
+    console.error("Cars load error:", error);
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "An unexpected error occurred.",
-        },
+    return {
+      success: false,
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred.",
       },
-      { status: 500 },
-    );
+    };
   }
 }
