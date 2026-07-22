@@ -67,6 +67,9 @@
  * Navy text: #0F172A
  * Primary blue: #2563EB
  */
+ html{
+  scroll-behavior: smooth;
+ }
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
