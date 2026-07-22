@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get("type") as EmailOtpType | null;
 
   const successRedirect = request.nextUrl.clone();
-  successRedirect.pathname = "/"; //! This should redirect to the customer profile page
+  successRedirect.pathname = "/login";
   successRedirect.search = "";
 
   const errorRedirect = request.nextUrl.clone();
