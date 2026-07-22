@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       car_images: {
@@ -286,9 +311,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       is_car_available: {
         Args: { p_car_id: string; p_pickup_date: string; p_return_date: string }
         Returns: boolean
+      }
+      preview_reservation: {
+        Args: { p_car_id: string; p_pickup_date: string; p_return_date: string }
+        Returns: {
+          available: boolean
+          car_id: string
+          pickup_date: string
+          price_per_day: number
+          rental_days: number
+          return_date: string
+          total_price: number
+          unavailable_reason: string
+        }[]
       }
     }
     Enums: {
@@ -426,6 +465,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["customer", "admin"],
