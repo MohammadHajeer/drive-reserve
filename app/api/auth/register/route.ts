@@ -105,13 +105,13 @@ export async function POST(request: Request) {
         success: true,
         data: {
           email,
-          requiresEmailVerification: data.session === null,
+          requiresEmailVerification: true,
         },
         message:
-          "Your account was created. Check your email to verify your account.",
+          "Check your email for a verification link. If you already have an account, sign in or reset your password.",
       },
       {
-        status: 201,
+        status: 200,
         headers: {
           "Cache-Control": "private, no-store",
         },
