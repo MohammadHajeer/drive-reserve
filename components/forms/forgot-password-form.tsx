@@ -17,6 +17,7 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 type ForgotPasswordFormProps = {
   initialEmail?: string;
+  initialErrorMessage?: string;
 };
 
 const privacySafeSuccessMessage =
@@ -24,6 +25,7 @@ const privacySafeSuccessMessage =
 
 export function ForgotPasswordForm({
   initialEmail = "",
+  initialErrorMessage,
 }: ForgotPasswordFormProps) {
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -63,31 +65,39 @@ export function ForgotPasswordForm({
   }
 
   return (
-    <form
-      className="space-y-6"
-      onSubmit={form.handleSubmit(onSubmit)}
-      noValidate
-    >
-      <FieldGroup className="gap-6">
-        <FormInputField
-          control={form.control}
-          name="email"
-          label="Email address"
-          icon={Mail}
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          required
-        />
-      </FieldGroup>
+    <>
+      {initialErrorMessage ? (
+        <div className="mb-6 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+          {initialErrorMessage}
+        </div>
+      ) : null}
 
-      <Button
-        type="submit"
-        disabled={form.formState.isSubmitting}
-        className="inline-flex h-auto w-full items-center justify-center rounded-3xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+      <form
+        className="space-y-6"
+        onSubmit={form.handleSubmit(onSubmit)}
+        noValidate
       >
-        {form.formState.isSubmitting ? "Sending..." : "Send recovery email"}
-      </Button>
-    </form>
+        <FieldGroup className="gap-6">
+          <FormInputField
+            control={form.control}
+            name="email"
+            label="Email address"
+            icon={Mail}
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            required
+          />
+        </FieldGroup>
+
+        <Button
+          type="submit"
+          disabled={form.formState.isSubmitting}
+          className="inline-flex h-auto w-full items-center justify-center rounded-3xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {form.formState.isSubmitting ? "Sending..." : "Send recovery email"}
+        </Button>
+      </form>
+    </>
   );
 }

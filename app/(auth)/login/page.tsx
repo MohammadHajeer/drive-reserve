@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthHeader } from "@/components/auth/auth-header";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { LoginForm } from "@/components/forms/login-form";
+
+import { LoginFormWithSearchParams } from "./login-form-with-search-params";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -11,30 +14,7 @@ export const metadata: Metadata = {
     "Sign in to DriveReserve to access vehicle reservations and manage your rentals.",
 };
 
-type LoginPageProps = {
-  searchParams: Promise<{
-    error?: string | string[];
-    verification?: string | string[];
-  }>;
-};
-
-function firstSearchParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const params = await searchParams;
-  const error = firstSearchParam(params.error);
-  const verification = firstSearchParam(params.verification);
-  const initialErrorMessage =
-    error === "profile-load-failed"
-      ? "Unable to load your account profile. Please try again."
-      : error === "google-auth-failed"
-        ? "Unable to continue with Google. Please try again."
-        : verification === "failed"
-          ? "Unable to verify your email. The verification link may be invalid or expired."
-          : undefined;
-
+export default function LoginPage() {
   return (
     <AuthLayout>
       <AuthHeader
@@ -43,7 +23,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         description="Enter your institutional credentials to access the DriveReserve reservation platform."
       />
 
-      <LoginForm initialErrorMessage={initialErrorMessage} />
+      <Suspense fallback={<LoginForm />}>
+        <LoginFormWithSearchParams />
+      </Suspense>
 
       <div className="mt-6 border-t border-border pt-6 text-center text-sm text-muted-foreground">
         New user?{" "}

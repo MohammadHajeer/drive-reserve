@@ -18,9 +18,13 @@ type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 type ResetPasswordFormProps = {
   nextUrl?: string;
+  initialErrorMessage?: string;
 };
 
-export function ResetPasswordForm({ nextUrl = "/" }: ResetPasswordFormProps) {
+export function ResetPasswordForm({
+  nextUrl = "/",
+  initialErrorMessage,
+}: ResetPasswordFormProps) {
   const router = useRouter();
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -61,43 +65,51 @@ export function ResetPasswordForm({ nextUrl = "/" }: ResetPasswordFormProps) {
   }
 
   return (
-    <form
-      className="space-y-6"
-      onSubmit={form.handleSubmit(onSubmit)}
-      noValidate
-    >
-      <FieldGroup className="gap-6">
-        <FormInputField
-          control={form.control}
-          name="password"
-          label="New password"
-          icon={Lock}
-          type="password"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          passwordToggle
-          required
-        />
-        <FormInputField
-          control={form.control}
-          name="confirmPassword"
-          label="Confirm password"
-          icon={Lock}
-          type="password"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          passwordToggle
-          required
-        />
-      </FieldGroup>
+    <>
+      {initialErrorMessage ? (
+        <div className="mb-6 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+          {initialErrorMessage}
+        </div>
+      ) : null}
 
-      <Button
-        type="submit"
-        disabled={form.formState.isSubmitting}
-        className="inline-flex h-auto w-full items-center justify-center rounded-3xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+      <form
+        className="space-y-6"
+        onSubmit={form.handleSubmit(onSubmit)}
+        noValidate
       >
-        {form.formState.isSubmitting ? "Saving..." : "Reset password"}
-      </Button>
-    </form>
+        <FieldGroup className="gap-6">
+          <FormInputField
+            control={form.control}
+            name="password"
+            label="New password"
+            icon={Lock}
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            passwordToggle
+            required
+          />
+          <FormInputField
+            control={form.control}
+            name="confirmPassword"
+            label="Confirm password"
+            icon={Lock}
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            passwordToggle
+            required
+          />
+        </FieldGroup>
+
+        <Button
+          type="submit"
+          disabled={form.formState.isSubmitting}
+          className="inline-flex h-auto w-full items-center justify-center rounded-3xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {form.formState.isSubmitting ? "Saving..." : "Reset password"}
+        </Button>
+      </form>
+    </>
   );
 }
