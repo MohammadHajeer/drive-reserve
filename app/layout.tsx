@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -59,8 +60,10 @@ export default function RootLayout({
           forcedTheme="light"
           disableTransitionOnChange
         >
-          <main>{children}</main>
-          <Toaster />
+          <QueryProvider>
+            <main>{children}</main>
+            <Toaster />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
