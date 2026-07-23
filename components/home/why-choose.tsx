@@ -11,8 +11,8 @@ const benefits = [
 
 export function WhyChoose() {
   return (
-    <section id="benefits" className="bg-background py-20 sm:py-24">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+    <section id="benefits" className="bg-background py-20 sm:py-24 container-paddings">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading
           eyebrow="Why DriveReserve"
           title="Car rental made clearer and easier"

@@ -10,8 +10,8 @@ const quickLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t bg-slate-950 text-slate-300">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-2 lg:grid-cols-4 lg:px-10">
+    <footer className="border-t bg-slate-950 text-slate-300 container-paddings">
+      <div className="mx-auto grid max-w-7xl gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <Link
             href="/"
@@ -90,8 +90,8 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+      <div className="border-t border-white/10 container-paddings">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} DriveReserve. All rights reserved.</p>
 
           <div className="flex gap-5">

@@ -14,8 +14,8 @@ export async function FeaturedCars() {
   const cars = result.success ? result.data.cars : [];
 
   return (
-    <section id="featured-cars" className="border-y bg-muted/40 py-20 sm:py-24">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+    <section id="featured-cars" className="border-y bg-muted/40 py-20 sm:py-24 container-paddings">
+      <div className="mx-auto max-w-7xl">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHeading
             eyebrow="Featured cars"

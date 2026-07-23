@@ -10,8 +10,8 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="overflow-hidden bg-slate-950 py-20 text-white sm:py-24">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+    <section id="how-it-works" className="overflow-hidden bg-slate-950 py-20 text-white sm:py-24 container-paddings">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading
           eyebrow="How it works"
           title="Reserve your car in three simple steps"

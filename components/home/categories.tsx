@@ -47,9 +47,9 @@ export function Categories() {
   return (
     <section
       id="categories"
-      className="scroll-mt-24 py-20 sm:py-24"
+      className="scroll-mt-24 py-20 sm:py-24 container-paddings"
     >
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading
           eyebrow="Browse by category"
           title="Find the right type of car"

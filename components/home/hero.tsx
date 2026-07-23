@@ -26,7 +26,7 @@ const benefits = [
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden border-b bg-slate-950">
+    <section className="relative isolate overflow-hidden border-b bg-slate-950 container-paddings">
       {/* Background */}
       <div
         className="absolute inset-0 -z-30 scale-105 bg-cover bg-position-[center_58%]"
@@ -55,7 +55,7 @@ export function Hero() {
       <div className="absolute -right-40 bottom-0 -z-10 size-120 rounded-full bg-blue-500/15 blur-[150px]" />
       <div className="absolute right-[12%] top-[18%] -z-10 size-64 rounded-full bg-sky-400/10 blur-[110px]" />
 
-      <div className="mx-auto grid min-h-195 max-w-7xl items-center gap-14 px-5 py-20 pt-24 sm:px-8 lg:grid-cols-[1.08fr_.92fr] lg:px-10 lg:py-24 lg:pt-32">
+      <div className="mx-auto grid min-h-195 max-w-7xl items-center gap-14 py-20 pt-24 lg:grid-cols-[1.08fr_.92fr] lg:py-24 lg:pt-32">
         {/* Left content */}
         <div className="max-w-2xl text-white">
           <div className="inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/10 py-2 pl-3 pr-4 text-sm font-medium text-slate-100 shadow-lg shadow-black/10 backdrop-blur-md">
