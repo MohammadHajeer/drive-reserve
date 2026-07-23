@@ -1,7 +1,7 @@
 "use client";
 
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Search } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { CarCard } from "@/components/car/car-card";
 import {
@@ -11,6 +11,8 @@ import {
   seatFilters,
   transmissions,
 } from "@/lib/mock-cars";
+
+const CARS_PER_PAGE = 6;
 
 function useDebouncedValue<T>(value: T, delay: number) {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -23,6 +25,27 @@ function useDebouncedValue<T>(value: T, delay: number) {
   return debouncedValue;
 }
 
+
+function getPaginationRange(currentPage: number, totalPages: number): (number | "ellipsis")[] {
+  const range: (number | "ellipsis")[] = [];
+  const delta = 1;
+
+  for (let page = 1; page <= totalPages; page++) {
+    const isEdge = page === 1 || page === totalPages;
+    const isNearCurrent = Math.abs(page - currentPage) <= delta;
+
+    if (isEdge || isNearCurrent) {
+      range.push(page);
+    } else if (range[range.length - 1] !== "ellipsis") {
+      range.push("ellipsis");
+    }
+  }
+
+  return range;
+}
+
+
+
 export default function CarsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -31,6 +54,7 @@ export default function CarsPage() {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(250);
   const [sortOption, setSortOption] = useState("price-asc");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
@@ -88,6 +112,23 @@ export default function CarsPage() {
         return second.pricePerDay - first.pricePerDay;
       });
   }, [debouncedSearchTerm, selectedCategories, selectedTransmissions, selectedFuelTypes, selectedSeats, maxPrice, sortOption]);
+
+  // Reset to page 1 whenever the filtered results change, so we never land on an empty page.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredCars]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCars.length / CARS_PER_PAGE));
+
+  const paginatedCars = useMemo(() => {
+    const start = (currentPage - 1) * CARS_PER_PAGE;
+    return filteredCars.slice(start, start + CARS_PER_PAGE);
+  }, [filteredCars, currentPage]);
+
+  function goToPage(page: number) {
+    const clamped = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(clamped);
+  }
 
   function toggleSelection(
     value: string,
@@ -271,11 +312,85 @@ export default function CarsPage() {
               No cars match the selected filters. Try expanding the price range or clearing some options.
             </div>
           ) : (
-            <div className="grid gap-6 xl:grid-cols-2">
-              {filteredCars.map((car) => (
-                <CarCard key={car.id} car={car} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {paginatedCars.map((car) => (
+                  <CarCard key={car.id} car={car} />
+                ))}
+              </div>
+
+            {totalPages > 1 && (
+  <div className="flex flex-col items-center justify-between gap-3 pt-2 sm:flex-row">
+    <p className="text-sm text-muted-foreground">
+  Showing{" "}
+  <span className="font-semibold text-foreground">
+    {(currentPage - 1) * CARS_PER_PAGE + 1}
+  </span>{" "}
+  to{" "}
+  <span className="font-semibold text-foreground">
+    {Math.min(currentPage * CARS_PER_PAGE, filteredCars.length)}
+  </span>{" "}
+  of{" "}
+  <span className="font-semibold text-foreground">
+    {filteredCars.length}
+  </span>{" "}
+  vehicles
+</p>
+
+    <nav
+      aria-label="Car listings pagination"
+      className="flex items-center gap-2"
+    >
+      <button
+        type="button"
+        onClick={() => goToPage(currentPage - 1)}
+        disabled={currentPage === 1}
+        aria-label="Previous page"
+        className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+
+      <div className="flex items-center gap-1">
+        {getPaginationRange(currentPage, totalPages).map((page, index) =>
+          page === "ellipsis" ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="inline-flex size-9 items-center justify-center text-sm text-muted-foreground"
+            >
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              type="button"
+              onClick={() => goToPage(page)}
+              aria-current={page === currentPage ? "page" : undefined}
+              className={`inline-flex size-9 items-center justify-center rounded-full text-sm font-semibold transition ${
+                page === currentPage
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {page}
+            </button>
+          ),
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => goToPage(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        aria-label="Next page"
+        className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <ChevronRight className="size-4" />
+      </button>
+    </nav>
+  </div>
+)}
+</>
           )}
         </section>
       </div>
