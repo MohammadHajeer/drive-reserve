@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  BadgeInfo,
-  CarFront,
-  Globe,
-  Mail,
-  MapPin,
-  Phone,
-} from "lucide-react";
+import { BadgeInfo, CarFront, Globe, Mail, MapPin, Phone } from "lucide-react";
 
 const quickLinks = [
   { label: "Browse Cars", href: "/cars" },
@@ -28,9 +21,7 @@ export function Footer() {
             <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-white">
               <CarFront className="size-5" aria-hidden="true" />
             </span>
-            <span className="text-lg font-bold text-white">
-              DriveReserve
-            </span>
+            <span className="text-lg font-bold text-white">DriveReserve</span>
           </Link>
 
           <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
@@ -69,10 +60,7 @@ export function Footer() {
           <ul className="mt-5 grid gap-3 text-sm text-slate-400">
             {quickLinks.map((link) => (
               <li key={link.label}>
-                <Link
-                  href={link.href}
-                  className="transition hover:text-white"
-                >
+                <Link href={link.href} className="transition hover:text-white">
                   {link.label}
                 </Link>
               </li>
@@ -104,9 +92,7 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-          <p>
-            © {new Date().getFullYear()} DriveReserve. All rights reserved.
-          </p>
+          <p>© {new Date().getFullYear()} DriveReserve. All rights reserved.</p>
 
           <div className="flex gap-5">
             <Link href="#" className="transition hover:text-slate-300">

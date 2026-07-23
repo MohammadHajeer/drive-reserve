@@ -1,24 +1,17 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { CarCard, type CarCardData } from "@/components/cars/car-card";
+import { CarCard } from "@/components/cars/car-card";
 import { SectionHeading } from "@/components/common/section-heading";
+import { DEFAULT_PUBLIC_CARS_FILTERS } from "@/lib/cars/public-cars";
 import { getPublicCars } from "@/lib/server/cars/get-public-cars";
 
-const fallbackCars: CarCardData[] = [
-  { id: "featured-mercedes", brand: "Mercedes-Benz", model: "C-Class", year: 2025, category: "Luxury", transmission: "Automatic", fuelType: "Petrol", seats: 5, pricePerDay: 95, primaryImageUrl: null },
-  { id: "featured-bmw", brand: "BMW", model: "X5", year: 2025, category: "SUV", transmission: "Automatic", fuelType: "Hybrid", seats: 5, pricePerDay: 135, primaryImageUrl: null },
-  { id: "featured-toyota", brand: "Toyota", model: "Corolla", year: 2024, category: "Economy", transmission: "Automatic", fuelType: "Petrol", seats: 5, pricePerDay: 48, primaryImageUrl: null },
-];
-
 export async function FeaturedCars() {
-  const result = await getPublicCars({ limit: "3", sort: "newest" });
-const cars =
-  result.success &&
-  result.data &&
-  result.data.cars.length > 0
-    ? result.data.cars
-    : fallbackCars;
+  const result = await getPublicCars(
+    { ...DEFAULT_PUBLIC_CARS_FILTERS, sort: "newest" },
+    { limit: 3 },
+  );
+  const cars = result.success ? result.data.cars : [];
 
   return (
     <section id="featured-cars" className="border-y bg-muted/40 py-20 sm:py-24">

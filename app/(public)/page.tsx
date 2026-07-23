@@ -5,7 +5,6 @@ import { Cta } from "@/components/home/cta";
 import { FeaturedCars } from "@/components/home/featured-cars";
 import { Hero } from "@/components/home/hero";
 import { HowItWorks } from "@/components/home/how-it-works";
-import { Testimonials } from "@/components/home/testimonials";
 import { WhyChoose } from "@/components/home/why-choose";
 
 export const metadata: Metadata = {
@@ -21,7 +20,6 @@ export default function HomePage() {
       <FeaturedCars />
       <WhyChoose />
       <HowItWorks />
-      <Testimonials />
       <Cta />
     </>
   );

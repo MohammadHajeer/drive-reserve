@@ -30,7 +30,7 @@ export function HomeCarCard({ car }: HomeCarCardProps) {
 
   return (
     <article className="group overflow-hidden rounded-2xl border bg-background shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+      <div className="relative aspect-16/10 overflow-hidden bg-muted">
         {car.primaryImageUrl ? (
           <Image
             src={car.primaryImageUrl}

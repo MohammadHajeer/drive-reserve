@@ -2,107 +2,36 @@ import "server-only";
 
 import { z } from "zod";
 
+import {
+  DEFAULT_PUBLIC_CARS_FILTERS,
+  PUBLIC_CAR_CATEGORIES,
+  PUBLIC_CAR_FUEL_TYPES,
+  PUBLIC_CAR_SEAT_GROUPS,
+  PUBLIC_CAR_SORT_OPTIONS,
+  PUBLIC_CAR_TRANSMISSIONS,
+  PUBLIC_CAR_VIEWS,
+  type PublicCarsFilters,
+  type PublicCarsSearchParams,
+} from "@/lib/cars/public-cars";
 import { createClient } from "@/lib/supabase/server";
 
-export type PublicCarsSearchParams = {
-  search?: string | string[];
-  category?: string | string[];
-  transmission?: string | string[];
-  seats?: string | string[];
-  minPrice?: string | string[];
-  maxPrice?: string | string[];
-  sort?: string | string[];
-  page?: string | string[];
-  limit?: string | string[];
-};
+const filtersSchema = z.object({
+  q: z
+    .string()
+    .trim()
+    .max(80)
+    .regex(/^[\p{L}\p{N}\s-]*$/u),
+  categories: z.array(z.enum(PUBLIC_CAR_CATEGORIES)).max(6),
+  transmissions: z.array(z.enum(PUBLIC_CAR_TRANSMISSIONS)).max(2),
+  fuels: z.array(z.enum(PUBLIC_CAR_FUEL_TYPES)).max(4),
+  seatGroups: z.array(z.enum(PUBLIC_CAR_SEAT_GROUPS)).max(3),
+  maxPrice: z.number().min(0).max(100_000).optional(),
+  sort: z.enum(PUBLIC_CAR_SORT_OPTIONS),
+  page: z.number().int().min(1).max(10_000),
+  view: z.enum(PUBLIC_CAR_VIEWS),
+});
 
-const categories = [
-  "economy",
-  "compact",
-  "sedan",
-  "suv",
-  "luxury",
-  "electric",
-] as const;
-
-const transmissions = ["automatic", "manual"] as const;
-const seatGroups = ["2-4", "5", "7+"] as const;
-
-const querySchema = z
-  .object({
-    search: z
-      .string()
-      .trim()
-      .max(80, "Search cannot exceed 80 characters")
-      .regex(/^[\p{L}\p{N}\s-]*$/u, "Search contains unsupported characters")
-      .default(""),
-
-    categories: z.array(z.enum(categories)).max(6).default([]),
-
-    transmissions: z.array(z.enum(transmissions)).max(2).default([]),
-
-    seatGroups: z.array(z.enum(seatGroups)).max(3).default([]),
-
-    minPrice: z.coerce.number().min(0).optional(),
-    maxPrice: z.coerce.number().min(0).optional(),
-
-    sort: z
-      .enum(["price-asc", "price-desc", "newest", "year-desc", "brand-asc"])
-      .default("price-asc"),
-
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(24).default(6),
-  })
-  .superRefine((data, context) => {
-    if (
-      data.minPrice !== undefined &&
-      data.maxPrice !== undefined &&
-      data.minPrice > data.maxPrice
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["minPrice"],
-        message: "Minimum price cannot exceed maximum price",
-      });
-    }
-  });
-
-function getSingleParameter(
-  searchParams: PublicCarsSearchParams,
-  name: keyof PublicCarsSearchParams,
-): string | undefined {
-  const parameter = searchParams[name];
-
-  return Array.isArray(parameter) ? parameter[0] : parameter;
-}
-
-function getOptionalParameter(
-  searchParams: PublicCarsSearchParams,
-  name: keyof PublicCarsSearchParams,
-): string | undefined {
-  const value = getSingleParameter(searchParams, name)?.trim();
-
-  return value || undefined;
-}
-
-function getListParameter(
-  searchParams: PublicCarsSearchParams,
-  name: keyof PublicCarsSearchParams,
-): string[] {
-  const parameter = searchParams[name];
-  const values = Array.isArray(parameter)
-    ? parameter
-    : parameter === undefined
-      ? []
-      : [parameter];
-
-  return values
-    .flatMap((value) => value.split(","))
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-const categoryLabels: Record<(typeof categories)[number], string> = {
+const categoryLabels: Record<(typeof PUBLIC_CAR_CATEGORIES)[number], string> = {
   economy: "Economy",
   compact: "Compact",
   sedan: "Sedan",
@@ -112,69 +41,134 @@ const categoryLabels: Record<(typeof categories)[number], string> = {
 };
 
 const sortOptions = {
-  "price-asc": {
-    column: "price_per_day",
-    ascending: true,
-  },
-  "price-desc": {
-    column: "price_per_day",
-    ascending: false,
-  },
-  newest: {
-    column: "created_at",
-    ascending: false,
-  },
-  "year-desc": {
-    column: "year",
-    ascending: false,
-  },
-  "brand-asc": {
-    column: "brand",
-    ascending: true,
-  },
+  "price-asc": { column: "price_per_day", ascending: true },
+  "price-desc": { column: "price_per_day", ascending: false },
+  newest: { column: "created_at", ascending: false },
+  "year-desc": { column: "year", ascending: false },
+  "brand-asc": { column: "brand", ascending: true },
 } as const;
 
-export async function getPublicCars(
+function firstValue(
   searchParams: PublicCarsSearchParams,
+  name: string,
+): string | undefined {
+  const value = searchParams[name];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function listValues(
+  searchParams: PublicCarsSearchParams,
+  name: string,
+): string[] {
+  const value = searchParams[name];
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+
+  return [
+    ...new Set(
+      values
+        .flatMap((item) => item.split(","))
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function enumValues<const T extends readonly string[]>(
+  values: string[],
+  supportedValues: T,
+): T[number][] {
+  const supported = new Set<string>(supportedValues);
+  return values.filter((value): value is T[number] => supported.has(value));
+}
+
+function enumValue<const T extends readonly string[]>(
+  value: string | undefined,
+  supportedValues: T,
+  fallback: T[number],
+): T[number] {
+  return value && supportedValues.includes(value as T[number])
+    ? (value as T[number])
+    : fallback;
+}
+
+function positiveNumber(value: string | undefined): number | undefined {
+  if (!value?.trim()) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 && number <= 100_000
+    ? number
+    : undefined;
+}
+
+function pageNumber(value: string | undefined): number {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= 10_000
+    ? number
+    : 1;
+}
+
+export function normalizePublicCarsFilters(
+  searchParams: PublicCarsSearchParams,
+): PublicCarsFilters {
+  const rawQuery = (firstValue(searchParams, "q") ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 80);
+  const q = /^[\p{L}\p{N}\s-]*$/u.test(rawQuery) ? rawQuery : "";
+
+  return filtersSchema.parse({
+    q,
+    categories: enumValues(
+      listValues(searchParams, "category"),
+      PUBLIC_CAR_CATEGORIES,
+    ),
+    transmissions: enumValues(
+      listValues(searchParams, "transmission"),
+      PUBLIC_CAR_TRANSMISSIONS,
+    ),
+    fuels: enumValues(listValues(searchParams, "fuel"), PUBLIC_CAR_FUEL_TYPES),
+    seatGroups: enumValues(
+      listValues(searchParams, "seats"),
+      PUBLIC_CAR_SEAT_GROUPS,
+    ),
+    maxPrice: positiveNumber(firstValue(searchParams, "maxPrice")),
+    sort: enumValue(
+      firstValue(searchParams, "sort")?.toLowerCase(),
+      PUBLIC_CAR_SORT_OPTIONS,
+      DEFAULT_PUBLIC_CARS_FILTERS.sort,
+    ),
+    page: pageNumber(firstValue(searchParams, "page")),
+    view: enumValue(
+      firstValue(searchParams, "view")?.toLowerCase(),
+      PUBLIC_CAR_VIEWS,
+      DEFAULT_PUBLIC_CARS_FILTERS.view,
+    ),
+  });
+}
+
+export async function getPublicCars(
+  filters: PublicCarsFilters,
+  options: { limit?: number } = {},
 ) {
   try {
-    const parsed = querySchema.safeParse({
-      search: getSingleParameter(searchParams, "search") ?? "",
-      categories: getListParameter(searchParams, "category"),
-      transmissions: getListParameter(searchParams, "transmission"),
-      seatGroups: getListParameter(searchParams, "seats"),
-      minPrice: getOptionalParameter(searchParams, "minPrice"),
-      maxPrice: getOptionalParameter(searchParams, "maxPrice"),
-      sort: getSingleParameter(searchParams, "sort") ?? "price-asc",
-      page: getSingleParameter(searchParams, "page") ?? "1",
-      limit: getSingleParameter(searchParams, "limit") ?? "6",
-    });
-
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: {
-          code: "INVALID_QUERY_PARAMETERS",
-          message: "Please check the selected filters.",
-          fieldErrors: parsed.error.flatten().fieldErrors,
-        },
-      };
-    }
-
+    const validatedFilters = filtersSchema.parse(filters);
+    const limit = z
+      .number()
+      .int()
+      .min(1)
+      .max(24)
+      .parse(options.limit ?? 6);
     const {
-      search,
-      categories: selectedCategories,
-      transmissions: selectedTransmissions,
-      seatGroups: selectedSeatGroups,
-      minPrice,
+      q,
+      categories,
+      transmissions,
+      fuels,
+      seatGroups,
       maxPrice,
       sort,
       page,
-      limit,
-    } = parsed.data;
+    } = validatedFilters;
 
     const supabase = await createClient();
-
     let query = supabase
       .from("cars")
       .select(
@@ -198,89 +192,93 @@ export async function getPublicCars(
             display_order
           )
         `,
-        {
-          count: "exact",
-        },
+        { count: "exact" },
       )
       .eq("status", "available");
 
-    if (search) {
-      const normalizedSearch = search.replace(/\s+/g, " ");
-
+    if (q) {
       query = query.or(
         [
-          `brand.ilike.%${normalizedSearch}%`,
-          `model.ilike.%${normalizedSearch}%`,
-          `category.ilike.%${normalizedSearch}%`,
+          `brand.ilike.%${q}%`,
+          `model.ilike.%${q}%`,
+          `category.ilike.%${q}%`,
         ].join(","),
       );
     }
 
-    if (selectedCategories.length > 0) {
-      const categoryFilters = selectedCategories.flatMap((category) => {
-        if (category === "electric") {
-          return ["fuel_type.eq.electric", "category.ilike.%Electric%"];
-        }
-
-        return [`category.ilike.%${categoryLabels[category]}%`];
-      });
-
+    if (categories.length > 0) {
+      const categoryFilters = categories.flatMap((category) =>
+        category === "electric"
+          ? ["fuel_type.eq.electric", "category.ilike.%Electric%"]
+          : [`category.ilike.%${categoryLabels[category]}%`],
+      );
       query = query.or(categoryFilters.join(","));
     }
 
-    if (selectedTransmissions.length > 0) {
-      query = query.in("transmission", selectedTransmissions);
+    if (transmissions.length > 0) {
+      query = query.in("transmission", transmissions);
     }
 
-    if (minPrice !== undefined) {
-      query = query.gte("price_per_day", minPrice);
+    if (fuels.length > 0) {
+      query = query.in("fuel_type", fuels);
     }
 
     if (maxPrice !== undefined) {
       query = query.lte("price_per_day", maxPrice);
     }
 
-    if (selectedSeatGroups.length > 0) {
-      const seatFilters = selectedSeatGroups.map((group) => {
-        switch (group) {
-          case "2-4":
-            return "and(seats.gte.2,seats.lte.4)";
-
-          case "5":
-            return "seats.eq.5";
-
-          case "7+":
-            return "seats.gte.7";
-        }
+    if (seatGroups.length > 0) {
+      const seatFilters = seatGroups.map((group) => {
+        if (group === "2-4") return "and(seats.gte.2,seats.lte.4)";
+        if (group === "5") return "seats.eq.5";
+        return "seats.gte.7";
       });
-
       query = query.or(seatFilters.join(","));
     }
 
     const sortOption = sortOptions[sort];
-
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data, count, error } = await query
-      .order(sortOption.column, {
-        ascending: sortOption.ascending,
-      })
-      .order("id", {
-        ascending: true,
-      })
-      .range(from, to);
+    const [carsResult, lowestPriceResult, highestPriceResult] =
+      await Promise.all([
+        query
+          .order(sortOption.column, { ascending: sortOption.ascending })
+          .order("id", { ascending: true })
+          .range(from, to),
+        supabase
+          .from("cars")
+          .select("price_per_day")
+          .eq("status", "available")
+          .order("price_per_day", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("cars")
+          .select("price_per_day")
+          .eq("status", "available")
+          .order("price_per_day", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
+    const { data, count, error } = carsResult;
     if (error) {
       console.error("Cars listing error:", error);
-
       return {
-        success: false,
+        success: false as const,
         error: {
           code: "CARS_LOAD_FAILED",
           message: "Unable to load the available cars.",
         },
       };
+    }
+
+    if (lowestPriceResult.error || highestPriceResult.error) {
+      console.error(
+        "Cars price range error:",
+        lowestPriceResult.error ?? highestPriceResult.error,
+      );
     }
 
     const cars = (data ?? []).map((car) => {
@@ -289,15 +287,8 @@ export async function getPublicCars(
             (first, second) => first.display_order - second.display_order,
           )
         : [];
-
       const primaryImage =
         images.find((image) => image.is_primary) ?? images[0] ?? null;
-
-      const primaryImageUrl = primaryImage
-        ? supabase.storage
-            .from("car-images")
-            .getPublicUrl(primaryImage.image_url).data.publicUrl
-        : null;
 
       return {
         id: car.id,
@@ -311,14 +302,21 @@ export async function getPublicCars(
         seats: car.seats,
         pricePerDay: Number(car.price_per_day),
         status: car.status,
-        primaryImageUrl,
+        primaryImageUrl: primaryImage
+          ? supabase.storage
+              .from("car-images")
+              .getPublicUrl(primaryImage.image_url).data.publicUrl
+          : null,
       };
     });
 
     const total = count ?? 0;
+    const priceStep = 5;
+    const rawMinimum = Number(lowestPriceResult.data?.price_per_day ?? 0);
+    const rawMaximum = Number(highestPriceResult.data?.price_per_day ?? 0);
 
     return {
-      success: true,
+      success: true as const,
       data: {
         cars,
         pagination: {
@@ -329,13 +327,20 @@ export async function getPublicCars(
           hasNextPage: page * limit < total,
           hasPreviousPage: page > 1,
         },
+        priceRange: {
+          min: Math.max(0, Math.floor(rawMinimum / priceStep) * priceStep),
+          max: Math.max(
+            priceStep,
+            Math.ceil(rawMaximum / priceStep) * priceStep,
+          ),
+          step: priceStep,
+        },
       },
     };
   } catch (error) {
     console.error("Cars load error:", error);
-
     return {
-      success: false,
+      success: false as const,
       error: {
         code: "INTERNAL_SERVER_ERROR",
         message: "An unexpected error occurred.",

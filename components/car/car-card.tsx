@@ -1,89 +1,137 @@
-import Image from "next/image";
-import { BatteryCharging, Fuel, Users, Wind } from "lucide-react";
-import type { CarListItem } from "@/lib/mock-cars";
+import Link from "next/link";
+import {
+  CarFront,
+  CheckCircle2,
+  Fuel,
+  Gauge,
+  Users,
+} from "lucide-react";
+
+import { buttonVariants } from "@/components/ui/button";
+import type {
+  PublicCarListItem,
+  PublicCarView,
+} from "@/lib/cars/public-cars";
+import { cn } from "@/lib/utils";
 
 type CarCardProps = {
-  car: CarListItem;
+  car: PublicCarListItem;
+  view?: PublicCarView;
 };
 
-export function CarCard({ car }: CarCardProps) {
+function titleCase(value: string) {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+export function CarCard({ car, view = "grid" }: CarCardProps) {
+  const detailsHref = `/cars/${car.id}`;
+  const availability = titleCase(car.status);
+
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-sm shadow-slate-950/5">
-      <div className="relative h-44 w-full overflow-hidden bg-slate-100">
-        <Image
-          src={car.imageUrl}
-          alt={`${car.brand} ${car.model}`}
-          fill 
-          unoptimized
-          className="object-cover object-center transition duration-300 hover:scale-105"
-        />
-        <span
-          className={`absolute left-4 top-4 z-10 rounded-full px-3 py-1 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm ${
-            car.status === "Available"
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-destructive/10 text-destructive"
-          }`}
-        >
-          {car.status}
+    <article
+      className={cn(
+        "group min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
+        view === "list" && "md:grid md:grid-cols-[260px_minmax(0,1fr)]",
+      )}
+    >
+      <div
+        className={cn(
+          "relative aspect-[16/10] overflow-hidden bg-muted",
+          view === "list" && "md:aspect-auto md:min-h-64",
+        )}
+      >
+        {car.primaryImageUrl ? (
+          // Storage hostnames vary by environment and are not known at build time.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={car.primaryImageUrl}
+            alt={`${car.brand} ${car.model}`}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+            <CarFront className="size-16" aria-hidden="true" />
+            <span className="text-xs">Image unavailable</span>
+          </div>
+        )}
+        <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm">
+          {car.category}
         </span>
       </div>
 
-    
-
-      <div className="flex flex-1 flex-col space-y-4 p-5">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                {car.category}
-              </p>
-              <h2 className="mt-1 truncate text-lg font-semibold text-foreground">
-                {car.brand} {car.model}
-              </h2>
-              <p className="truncate text-xs text-muted-foreground">
-                {car.year} · {car.location}
-              </p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-xl font-semibold text-foreground">
-                ${car.pricePerDay}
-              </p>
-              <p className="text-xs text-muted-foreground">per day</p>
-            </div>
+      <div className="flex min-w-0 flex-col p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold tracking-tight">
+              {car.brand} {car.model}
+            </h2>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>{car.year}</span>
+              <span aria-hidden="true">•</span>
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                {availability}
+              </span>
+            </p>
           </div>
+          <p className="shrink-0 text-right">
+            <span className="block text-xl font-bold text-primary">
+              ${car.pricePerDay}
+            </span>
+            <span className="block text-[11px] text-muted-foreground">per day</span>
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted px-2.5 py-2">
-            <Users className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate">{car.seats} seats</span>
+        <dl className="mt-4 grid grid-cols-3 gap-2">
+          <div className="min-w-0 rounded-lg border bg-muted/50 px-2 py-2 text-center">
+            <Gauge className="mx-auto size-4 text-muted-foreground" aria-hidden="true" />
+            <dt className="mt-1 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+              Trans
+            </dt>
+            <dd className="mt-0.5 truncate text-[11px] font-medium">
+              {titleCase(car.transmission)}
+            </dd>
           </div>
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted px-2.5 py-2">
-            <Wind className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate">{car.transmission}</span>
+          <div className="min-w-0 rounded-lg border bg-muted/50 px-2 py-2 text-center">
+            <Users className="mx-auto size-4 text-muted-foreground" aria-hidden="true" />
+            <dt className="mt-1 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+              Seats
+            </dt>
+            <dd className="mt-0.5 truncate text-[11px] font-medium">
+              {car.seats} people
+            </dd>
           </div>
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted px-2.5 py-2">
-            <Fuel className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate">{car.fuelType}</span>
+          <div className="min-w-0 rounded-lg border bg-muted/50 px-2 py-2 text-center">
+            <Fuel className="mx-auto size-4 text-muted-foreground" aria-hidden="true" />
+            <dt className="mt-1 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+              Fuel
+            </dt>
+            <dd className="mt-0.5 truncate text-[11px] font-medium">
+              {titleCase(car.fuelType)}
+            </dd>
           </div>
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted px-2.5 py-2">
-            <BatteryCharging className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate">{car.year}</span>
-          </div>
-        </div>
+        </dl>
 
-        <div className="mt-auto flex flex-row gap-2">
-          <button
-            type="button"
-            disabled={car.status !== "Available"}
-            className="inline-flex w-1/2 items-center justify-center whitespace-nowrap rounded-2xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground">
-            {car.status === "Available" ? "Book now" : "Unavailable"}
-          </button>
-          <button
-            type="button"
-            className="inline-flex w-1/2 items-center justify-center whitespace-nowrap rounded-2xl border border-border bg-card px-2 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted sm:text-sm">
-          View details
-        </button>
+        <div className="mt-auto grid grid-cols-2 gap-2 border-t pt-4">
+          <Link
+            href={detailsHref}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "h-9 rounded-lg",
+            )}
+          >
+            Details
+          </Link>
+          <Link
+            href={detailsHref}
+            className={cn(buttonVariants(), "h-9 rounded-lg")}
+          >
+            Book Now
+          </Link>
         </div>
       </div>
     </article>
