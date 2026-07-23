@@ -2,19 +2,32 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   CalendarDays,
   CarFront,
+  ChevronDown,
   LayoutDashboard,
   LogIn,
+  LogOut,
   Menu,
   UserRound,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export type NavbarUser = {
@@ -51,11 +64,12 @@ function getUserInitial(email: string | null) {
 }
 
 export function NavbarClient({ user }: NavbarClientProps) {
-  console.log("NavbarClient user:", user); // Log the user object to the console
   const pathname = usePathname();
+  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isHomePage = pathname === "/";
   const isTransparent = isHomePage && !isScrolled && !isOpen;
@@ -66,6 +80,33 @@ export function NavbarClient({ user }: NavbarClientProps) {
     user?.role === "admin" ? "Admin dashboard" : "My reservations";
 
   const DashboardIcon = user?.role === "admin" ? LayoutDashboard : CalendarDays;
+
+  async function handleLogout() {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        throw error;
+      }
+
+      setIsOpen(false);
+      router.replace("/");
+      router.refresh();
+      toast.success("Signed out successfully.");
+    } catch (error) {
+      console.error("Failed to sign out:", error);
+      toast.error("Unable to sign out. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   useEffect(() => {
     function handleScroll() {
@@ -185,6 +226,8 @@ export function NavbarClient({ user }: NavbarClientProps) {
                 dashboardLabel={dashboardLabel}
                 DashboardIcon={DashboardIcon}
                 isTransparent={isTransparent}
+                isLoggingOut={isLoggingOut}
+                onLogout={handleLogout}
               />
             ) : (
               <GuestActions isTransparent={isTransparent} />
@@ -258,6 +301,8 @@ export function NavbarClient({ user }: NavbarClientProps) {
                 dashboardLabel={dashboardLabel}
                 DashboardIcon={DashboardIcon}
                 closeMenu={closeMenu}
+                isLoggingOut={isLoggingOut}
+                onLogout={handleLogout}
               />
             ) : (
               <MobileGuestActions closeMenu={closeMenu} />
@@ -315,12 +360,16 @@ function AuthenticatedActions({
   dashboardLabel,
   DashboardIcon,
   isTransparent,
+  isLoggingOut,
+  onLogout,
 }: {
   user: NavbarUser;
   dashboardHref: string;
   dashboardLabel: string;
   DashboardIcon: typeof LayoutDashboard;
   isTransparent: boolean;
+  isLoggingOut: boolean;
+  onLogout: () => Promise<void>;
 }) {
   return (
     <>
@@ -345,27 +394,79 @@ function AuthenticatedActions({
         {dashboardLabel}
       </Link>
 
-      <Link
-        href="/account"
-        aria-label="Open account"
-        className={cn(
-          buttonVariants({
-            variant: "outline",
-            size: "sm",
-          }),
-          "h-10 rounded-full py-1 pl-1.5 pr-3",
-          isTransparent &&
-            "border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white",
-        )}
-      >
-        <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-          {getUserInitial(user.email)}
-        </span>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              aria-label="Open profile menu"
+              className={cn(
+                buttonVariants({
+                  variant: "outline",
+                  size: "sm",
+                }),
+                "h-10 rounded-full py-1 pr-2 pl-1.5",
+                isTransparent &&
+                  "border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white",
+              )}
+            />
+          }
+        >
+          <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+            {getUserInitial(user.email)}
+          </span>
 
-        <span className="max-w-28 truncate">
-          {user.email?.split("@")[0] || "Account"}
-        </span>
-      </Link>
+          <span className="max-w-28 truncate">
+            {user.email?.split("@")[0] || "Profile"}
+          </span>
+
+          <ChevronDown className="size-3.5 opacity-60" aria-hidden="true" />
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          align="end"
+          sideOffset={8}
+          className="w-64 rounded-xl"
+        >
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="font-normal">
+              <p className="text-xs text-muted-foreground">Signed in as</p>
+
+              <p className="mt-1 truncate text-sm font-semibold text-foreground">
+                {user.email || "DriveReserve user"}
+              </p>
+
+              <p className="mt-1 text-xs capitalize text-muted-foreground">
+                {user.role}
+              </p>
+            </DropdownMenuLabel>
+
+            {user.role === "admin" ? (
+              <DropdownMenuItem render={<Link href="/admin" />}>
+                <LayoutDashboard className="size-4" aria-hidden="true" />
+                Admin dashboard
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem render={<Link href="/account" />}>
+                <UserRound className="size-4" aria-hidden="true" />
+                Account
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={isLoggingOut}
+            onClick={() => void onLogout()}
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+
+            {isLoggingOut ? "Signing out..." : "Sign out"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 }
@@ -406,13 +507,19 @@ function MobileAuthenticatedActions({
   dashboardLabel,
   DashboardIcon,
   closeMenu,
+  isLoggingOut,
+  onLogout,
 }: {
   user: NavbarUser;
   dashboardHref: string;
   dashboardLabel: string;
   DashboardIcon: typeof LayoutDashboard;
   closeMenu: () => void;
+  isLoggingOut: boolean;
+  onLogout: () => Promise<void>;
 }) {
+  const isCustomer = user.role === "customer";
+
   return (
     <div className="mt-3 border-t pt-4">
       <div className="mb-4 flex items-center gap-3 rounded-xl bg-muted/70 p-3">
@@ -422,8 +529,13 @@ function MobileAuthenticatedActions({
 
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">Signed in as</p>
+
           <p className="truncate text-sm font-semibold text-foreground">
             {user.email || "DriveReserve user"}
+          </p>
+
+          <p className="text-xs capitalize text-muted-foreground">
+            {user.role}
           </p>
         </div>
       </div>
@@ -442,23 +554,45 @@ function MobileAuthenticatedActions({
           {dashboardLabel}
         </Link>
 
-        <Link
-          href="/account"
-          onClick={closeMenu}
+        {isCustomer && (
+          <Link
+            href="/account"
+            onClick={closeMenu}
+            className={cn(
+              buttonVariants({
+                variant: "outline",
+              }),
+              "h-11 rounded-xl font-semibold",
+            )}
+          >
+            <UserRound
+              data-icon="inline-start"
+              className="size-4"
+              aria-hidden="true"
+            />
+            Account
+          </Link>
+        )}
+
+        <button
+          type="button"
+          disabled={isLoggingOut}
+          onClick={() => void onLogout()}
           className={cn(
             buttonVariants({
               variant: "outline",
             }),
-            "h-11 rounded-xl font-semibold",
+            "h-11 rounded-xl font-semibold text-destructive hover:text-destructive",
+            isCustomer && "sm:col-span-2",
           )}
         >
-          <UserRound
+          <LogOut
             data-icon="inline-start"
             className="size-4"
             aria-hidden="true"
           />
-          Account
-        </Link>
+          {isLoggingOut ? "Signing out..." : "Sign out"}
+        </button>
       </div>
     </div>
   );
