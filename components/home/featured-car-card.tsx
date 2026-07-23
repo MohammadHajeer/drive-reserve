@@ -14,10 +14,10 @@ export type CarCardData = {
   primaryImageUrl: string | null;
 };
 
-export function CarCard({ car }: { car: CarCardData }) {
+export function FeaturedCarCard({ car }: { car: CarCardData }) {
   return (
     <article className="group overflow-hidden rounded-3xl border bg-card shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-slate-900/10">
-      <div className="relative aspect-[16/10] overflow-hidden bg-linear-to-br from-slate-100 to-slate-200">
+      <div className="relative aspect-16/10 overflow-hidden bg-linear-to-br from-slate-100 to-slate-200">
         {car.primaryImageUrl ? (
           // Supabase Storage URLs are dynamic, so a regular image keeps the card reusable across environments.
           // eslint-disable-next-line @next/next/no-img-element

@@ -27,7 +27,7 @@ function titleCase(value: string) {
     .join(" ");
 }
 
-export function CarCard({ car, view = "grid" }: CarCardProps) {
+export function CarCardDisplay({ car, view = "grid" }: CarCardProps) {
   const detailsHref = `/cars/${car.id}`;
   const availability = titleCase(car.status);
 

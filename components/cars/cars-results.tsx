@@ -1,6 +1,5 @@
 import { CarFront } from "lucide-react";
 
-import { CarCard } from "@/components/car/car-card";
 import type {
   PublicCarListItem,
   PublicCarsPagination,
@@ -10,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 import { CarsPagination } from "./cars-pagination";
 import { ClearCarsFilters } from "./clear-cars-filters";
+import { CarCardDisplay } from "./car-card-display";
 
 export function CarsResults({
   cars,
@@ -55,7 +55,7 @@ export function CarsResults({
         )}
       >
         {cars.map((car) => (
-          <CarCard key={car.id} car={car} view={view} />
+          <CarCardDisplay key={car.id} car={car} view={view} />
         ))}
       </div>
       <CarsPagination pagination={pagination} />
