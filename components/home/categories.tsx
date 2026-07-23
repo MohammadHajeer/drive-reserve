@@ -1,24 +1,29 @@
 import Link from "next/link";
+import { SectionHeading } from "@/components/common/section-heading";
 import {
+    ArrowRight,
+  BadgeDollarSign,
   CarFront,
   Crown,
-  Gauge,
-  Leaf,
-  Sparkles,
+  Minimize2,
   Users,
+  Zap,
 } from "lucide-react";
-
-import { SectionHeading } from "@/components/common/section-heading";
 
 const categories = [
   {
     name: "Economy",
-    description: "Affordable cars for everyday travel.",
-    icon: Leaf,
+    description: "Affordable and fuel-efficient cars for everyday travel.",
+    icon: BadgeDollarSign,
+  },
+  {
+    name: "Compact",
+    description: "Small and practical cars that are easy to drive and park.",
+    icon: Minimize2,
   },
   {
     name: "Sedan",
-    description: "Comfortable vehicles for city and highway trips.",
+    description: "Comfortable vehicles for city driving and highway trips.",
     icon: CarFront,
   },
   {
@@ -28,18 +33,14 @@ const categories = [
   },
   {
     name: "Luxury",
-    description: "Premium cars with comfort and refined features.",
+    description: "Premium vehicles with refined comfort and advanced features.",
     icon: Crown,
   },
   {
-    name: "Sports",
-    description: "Performance-focused cars for an exciting drive.",
-    icon: Gauge,
-  },
-  {
     name: "Electric",
-    description: "Modern and efficient electric vehicles.",
-    icon: Sparkles,
+    description:
+      "Modern and efficient vehicles powered entirely by electricity.",
+    icon: Zap,
   },
 ];
 
@@ -61,7 +62,7 @@ export function Categories() {
             <Link
               key={name}
               href={`/cars?category=${encodeURIComponent(name)}`}
-              className="group rounded-2xl border bg-background p-6 transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+              className="group flex flex-col rounded-2xl border bg-background p-6 transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
             >
               <span className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
                 <Icon className="size-6" />
@@ -69,13 +70,13 @@ export function Categories() {
 
               <h3 className="mt-5 text-lg font-bold">{name}</h3>
 
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-6 text-muted-foreground mb-3">
                 {description}
               </p>
 
-              <span className="mt-5 inline-block text-sm font-semibold text-primary">
-                Browse {name} cars
-              </span>
+              <div className="mt-auto text-sm font-semibold text-primary flex items-center gap-1 group-hover:underline">
+                Browse {name} cars <ArrowRight className="size-5" />
+              </div>
             </Link>
           ))}
         </div>

@@ -40,7 +40,7 @@ export function CarCard({ car, view = "grid" }: CarCardProps) {
     >
       <div
         className={cn(
-          "relative aspect-[16/10] overflow-hidden bg-muted",
+          "relative aspect-16/10 overflow-hidden bg-muted",
           view === "list" && "md:aspect-auto md:min-h-64",
         )}
       >
