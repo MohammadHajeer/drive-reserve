@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/common/section-heading";
 import { DEFAULT_PUBLIC_CARS_FILTERS } from "@/lib/cars/public-cars";
 import { getPublicCars } from "@/lib/server/cars/get-public-cars";
-import { FeaturedCarCard } from "./featured-car-card";
+import { CarCard } from "../cars/car-card";
 
 export async function FeaturedCars() {
   const result = await getPublicCars(
@@ -37,7 +37,7 @@ export async function FeaturedCars() {
 
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {cars.map((car) => (
-            <FeaturedCarCard key={car.id} car={car} />
+            <CarCard key={car.id} car={car} variant="featured" />
           ))}
         </div>
       </div>

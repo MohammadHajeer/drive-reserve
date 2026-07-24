@@ -7,6 +7,8 @@ import { CarGallery } from "@/components/car-details/car-gallery";
 import { CarSpecs } from "@/components/car-details/car-specs";
 import { ReservationCard } from "@/components/car-details/reservation-card";
 import { getPublicCarById } from "@/lib/server/cars/get-public-car-by-id";
+import { getRelatedCars } from "@/lib/server/cars/get-related-cars";
+import { CarCard } from "@/components/cars/car-card";
 
 export default async function CarDetailsPage({
   params,
@@ -15,6 +17,17 @@ export default async function CarDetailsPage({
 }) {
   const { id } = await params;
   const result = await getPublicCarById(id);
+
+  const relatedCars = await getRelatedCars({
+    id: result.data?.car.id ?? "",
+    category: result.data?.car.category ?? "",
+    transmission: result.data?.car.transmission ?? "",
+    fuelType: result.data?.car.fuelType ?? "",
+    seats: result.data?.car.seats ?? 0,
+    pricePerDay: result.data?.car.pricePerDay ?? 0,
+  });
+
+  console.log("Related cars:", relatedCars);
 
   if (!result.success) {
     if (
@@ -82,6 +95,22 @@ export default async function CarDetailsPage({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mx-auto mt-12 max-w-7xl">
+        {relatedCars.success && relatedCars.data.length > 0 && (
+          <div>
+            <h2 className="mb-6 text-lg font-semibold text-foreground">
+              Related Cars
+            </h2>
+
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedCars.data.map((relatedCar) => (
+                <CarCard key={relatedCar.id} car={relatedCar} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
