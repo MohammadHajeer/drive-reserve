@@ -6,6 +6,7 @@ import type { CarUnavailableRangesInput } from "@/lib/validations/reservation.va
 export type CarUnavailableRange = {
   startDate: string;
   endDateExclusive: string;
+  isMine: boolean;
 };
 
 export class CarUnavailableRangesError extends Error {
@@ -23,11 +24,14 @@ export async function getCarUnavailableRanges(
 ): Promise<CarUnavailableRange[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("get_car_unavailable_ranges", {
-    p_car_id: input.carId,
-    p_from_date: input.from,
-    p_to_date: input.to,
-  });
+  const { data, error } = await supabase.rpc(
+    "get_car_unavailable_ranges",
+    {
+      p_car_id: input.carId,
+      p_from_date: input.from,
+      p_to_date: input.to,
+    },
+  );
 
   if (error) {
     console.error("Unavailable ranges RPC error:", error);
@@ -55,5 +59,6 @@ export async function getCarUnavailableRanges(
   return (data ?? []).map((range) => ({
     startDate: range.start_date,
     endDateExclusive: range.end_date_exclusive,
+    isMine: range.is_mine,
   }));
 }

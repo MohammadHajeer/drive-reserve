@@ -73,7 +73,7 @@ export default async function CarDetailsPage({
           </div>
 
           <div className="lg:col-span-5 xl:col-span-4">
-            <div className="sticky top-6">
+            <div className="sticky top-24">
               <ReservationCard
                 carId={car.id}
                 pricePerDay={car.pricePerDay}

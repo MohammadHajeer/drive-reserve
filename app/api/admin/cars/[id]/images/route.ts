@@ -121,6 +121,8 @@ export async function POST(
 
     const formData = await request.formData();
 
+    console.log("Received form data:", formData);
+
     const images = formData
       .getAll("images")
       .filter((value): value is File => value instanceof File);

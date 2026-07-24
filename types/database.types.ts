@@ -319,6 +319,7 @@ export type Database = {
         Args: { p_car_id: string; p_from_date: string; p_to_date: string }
         Returns: {
           end_date_exclusive: string
+          is_mine: boolean
           start_date: string
         }[]
       }
