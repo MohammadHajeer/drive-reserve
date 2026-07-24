@@ -94,9 +94,15 @@ export type UpdateAdminCarVariables = {
 export type UploadAdminCarImagesVariables = {
   carId: string;
   images: readonly File[];
+  onProgress?: (progress: number) => void;
 };
 
 export type DeleteAdminCarImageVariables = {
+  carId: string;
+  imageId: CarImageRow["id"];
+};
+
+export type SetPrimaryAdminCarImageVariables = {
   carId: string;
   imageId: CarImageRow["id"];
 };
@@ -136,6 +142,10 @@ export type AdminCarData = {
 
 export type AdminCarImagesData = {
   images: AdminCarImage[];
+};
+
+export type AdminCarImageData = {
+  image: AdminCarImage;
 };
 
 export type DeletedAdminCarImageData = {

@@ -2,6 +2,7 @@ import type {
   AdminCar,
   AdminCarApiResponse,
   AdminCarData,
+  AdminCarImageData,
   AdminCarImagesData,
   AdminCarImage,
   AdminCarsListData,
@@ -9,6 +10,7 @@ import type {
   CreateAdminCarInput,
   DeletedAdminCarImageData,
   DeleteAdminCarImageVariables,
+  SetPrimaryAdminCarImageVariables,
   UpdateAdminCarInput,
   UploadAdminCarImagesVariables,
 } from "../admin-car.types";
@@ -210,6 +212,7 @@ export async function deleteAdminCar(carId: string): Promise<AdminCar> {
 export async function uploadAdminCarImages({
   carId,
   images,
+  onProgress,
 }: UploadAdminCarImagesVariables): Promise<AdminCarImage[]> {
   const formData = new FormData();
 
@@ -217,18 +220,47 @@ export async function uploadAdminCarImages({
     formData.append(ADMIN_CAR_IMAGE_UPLOAD.fieldName, image);
   }
 
-  const response = await fetch(`${adminCarPath(carId)}/images`, {
-    method: "POST",
-    body: formData,
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+
+    request.open("POST", `${adminCarPath(carId)}/images`);
+
+    request.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) return;
+      onProgress?.(Math.round((event.loaded / event.total) * 100));
+    });
+
+    request.addEventListener("load", async () => {
+      try {
+        const response = new Response(request.responseText, {
+          status: request.status,
+        });
+        const data = await parseAdminCarResponse<AdminCarImagesData>(
+          response,
+          "Unable to upload the car images.",
+          "IMAGE_UPLOAD_FAILED",
+        );
+
+        onProgress?.(100);
+        resolve(data.images);
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    request.addEventListener("error", () => {
+      reject(
+        new AdminCarRequestError(
+          "Unable to reach the image upload service.",
+          "IMAGE_UPLOAD_NETWORK_ERROR",
+          0,
+        ),
+      );
+    });
+
+    onProgress?.(0);
+    request.send(formData);
   });
-
-  const data = await parseAdminCarResponse<AdminCarImagesData>(
-    response,
-    "Unable to upload the car images.",
-    "IMAGE_UPLOAD_FAILED",
-  );
-
-  return data.images;
 }
 
 export async function deleteAdminCarImage({
@@ -248,4 +280,25 @@ export async function deleteAdminCarImage({
     "Unable to delete the car image.",
     "IMAGE_DELETE_FAILED",
   );
+}
+
+export async function setPrimaryAdminCarImage({
+  carId,
+  imageId,
+}: SetPrimaryAdminCarImageVariables): Promise<AdminCarImage> {
+  const response = await fetch(`${adminCarPath(carId)}/images`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ imageId }),
+  });
+
+  const data = await parseAdminCarResponse<AdminCarImageData>(
+    response,
+    "Unable to set the primary car image.",
+    "PRIMARY_IMAGE_UPDATE_FAILED",
+  );
+
+  return data.image;
 }
