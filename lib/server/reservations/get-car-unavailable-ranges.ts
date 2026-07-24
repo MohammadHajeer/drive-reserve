@@ -23,7 +23,7 @@ export async function getCarUnavailableRanges(
 ): Promise<CarUnavailableRange[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("get_car_unava ilable_ranges", {
+  const { data, error } = await supabase.rpc("get_car_unavailable_ranges", {
     p_car_id: input.carId,
     p_from_date: input.from,
     p_to_date: input.to,
