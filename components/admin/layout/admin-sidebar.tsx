@@ -53,7 +53,7 @@ export function AdminSidebar({
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
+        <div className="flex h-18 items-center justify-between border-b border-white/10 px-6">
           <Link href="/admin" className="flex items-center gap-3" onClick={onClose}>
             <span className="grid size-10 place-items-center rounded-xl bg-blue-600">
               <CarFront className="size-5" />

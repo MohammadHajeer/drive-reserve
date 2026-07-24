@@ -1,7 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, Pencil, PowerOff, RotateCcw } from "lucide-react";
+import {
+  CarFront,
+  MoreHorizontal,
+  Pencil,
+  PowerOff,
+  RotateCcw,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,87 +17,134 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import type { AdminCar } from "@/features/admin/cars/admin-car.types";
 import type { AdminCarListItem } from "./admin-car-list-item";
 import { CarStatusBadge } from "./car-status-badge";
+
+type CarsTableProps = {
+  items: readonly AdminCarListItem[];
+  busyCarId?: string;
+  onDeactivate: (car: AdminCar) => void;
+  onRestore: (car: AdminCar) => void;
+};
 
 export function CarsTable({
   items,
   busyCarId,
   onDeactivate,
   onRestore,
-}: {
-  items: readonly AdminCarListItem[];
-  busyCarId?: string;
-  onDeactivate: (car: AdminCar) => void;
-  onRestore: (car: AdminCar) => void;
-}) {
+}: CarsTableProps) {
   return (
-    <div className="hidden overflow-hidden rounded-t-2xl border border-b-0 bg-white md:block">
+    <div className="hidden overflow-hidden rounded-2xl rounded-b-none border border-b-0 bg-card shadow-xs md:block">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <table className="w-full min-w-245 text-left text-sm">
+          <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-5 py-4 font-semibold">Vehicle</th>
-              <th className="px-5 py-4 font-semibold">Plate</th>
-              <th className="px-5 py-4 font-semibold">Category</th>
-              <th className="px-5 py-4 font-semibold">Transmission</th>
-              <th className="px-5 py-4 font-semibold">Daily price</th>
-              <th className="px-5 py-4 font-semibold">Status</th>
-              <th className="px-5 py-4 font-semibold">Updated</th>
-              <th className="px-5 py-4 text-right font-semibold">Actions</th>
+              <th className="px-5 py-4 font-medium text-muted-foreground">
+                Vehicle
+              </th>
+
+              <th className="px-5 py-4 font-medium text-muted-foreground">
+                Plate
+              </th>
+
+              <th className="px-5 py-4 font-medium text-muted-foreground">
+                Category
+              </th>
+
+              <th className="px-5 py-4 font-medium text-muted-foreground">
+                Transmission
+              </th>
+
+              <th className="px-5 py-4 text-right font-medium text-muted-foreground">
+                Daily price
+              </th>
+
+              <th className="px-5 py-4 font-medium text-muted-foreground">
+                Status
+              </th>
+
+              <th className="px-5 py-4 font-medium text-muted-foreground">
+                Updated
+              </th>
+
+              <th className="sticky right-0 bg-muted/95 px-5 py-4 text-right font-medium text-muted-foreground backdrop-blur-sm">
+                Actions
+              </th>
             </tr>
           </thead>
+
           <tbody className="divide-y">
             {items.map((item) => {
               const { car } = item;
+              const isBusy = busyCarId === car.id;
 
               return (
-                <tr key={car.id} className="hover:bg-slate-50/80">
+                <tr
+                  key={car.id}
+                  className="group transition-colors hover:bg-muted/30"
+                >
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-14 w-20 overflow-hidden rounded-xl bg-slate-100">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border bg-muted">
                         {item.imageUrl ? (
-                          <img
+                          <Image
                             src={item.imageUrl}
                             alt={item.name}
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="80px"
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
-                          <div className="grid h-full place-items-center text-xs text-slate-400">
-                            No image
+                          <div className="grid h-full place-items-center text-muted-foreground">
+                            <CarFront className="size-5" aria-hidden="true" />
+                            <span className="sr-only">
+                              No image available
+                            </span>
                           </div>
                         )}
                       </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">
+
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground">
                           {item.name}
                         </p>
-                        <p className="text-xs text-slate-500">
+
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {item.vehicleMetaLabel}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-4 font-medium text-slate-700">
-                    {car.plateNumber}
+
+                  <td className="px-5 py-4">
+                    <span className="inline-flex rounded-md border bg-muted/50 px-2 py-1 font-mono text-xs font-medium text-foreground">
+                      {car.plateNumber}
+                    </span>
                   </td>
-                  <td className="px-5 py-4 capitalize text-slate-600">
+
+                  <td className="px-5 py-4 capitalize text-muted-foreground">
                     {car.category}
                   </td>
-                  <td className="px-5 py-4 capitalize text-slate-600">
+
+                  <td className="px-5 py-4 capitalize text-muted-foreground">
                     {car.transmission}
                   </td>
-                  <td className="px-5 py-4 font-semibold text-slate-900">
+
+                  <td className="whitespace-nowrap px-5 py-4 text-right font-semibold text-foreground">
                     {item.dailyPriceLabel}
                   </td>
+
                   <td className="px-5 py-4">
                     <CarStatusBadge status={car.status} />
                   </td>
-                  <td className="px-5 py-4 text-slate-500">
+
+                  <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">
                     {item.updatedLabel}
                   </td>
-                  <td className="px-5 py-4 text-right">
+
+                  <td className="sticky right-0 bg-card px-5 py-4 text-right transition-colors group-hover:bg-muted">
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
@@ -100,23 +155,30 @@ export function CarsTable({
                             aria-label={`Actions for ${item.name}`}
                           />
                         }
-                        disabled={busyCarId === car.id}
+                        disabled={isBusy}
                       >
                         <MoreHorizontal className="size-5" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-xl">
+
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-44 rounded-xl"
+                      >
                         <DropdownMenuItem
                           render={<Link href={item.editHref} />}
                           className="rounded-lg"
                         >
-                          <Pencil /> Edit car
+                          <Pencil />
+                          Edit car
                         </DropdownMenuItem>
+
                         {car.status === "inactive" ? (
                           <DropdownMenuItem
                             onClick={() => onRestore(car)}
                             className="rounded-lg"
                           >
-                            <RotateCcw /> Restore car
+                            <RotateCcw />
+                            Restore car
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
@@ -124,7 +186,8 @@ export function CarsTable({
                             onClick={() => onDeactivate(car)}
                             className="rounded-lg"
                           >
-                            <PowerOff /> Deactivate car
+                            <PowerOff />
+                            Deactivate car
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

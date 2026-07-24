@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CAR_STATUSES, FUEL_TYPES, TRANSMISSIONS } from "@/types/domain";
+import { PUBLIC_CAR_CATEGORIES } from "../cars/public-cars";
 
 export const createCarSchema = z.object({
   brand: z.string().trim().min(2).max(50),
@@ -15,7 +16,7 @@ export const createCarSchema = z.object({
     .transform((value) => value.toUpperCase()),
 
   color: z.string().trim().min(2).max(30),
-  category: z.string().trim().min(2).max(50),
+  category: z.enum(PUBLIC_CAR_CATEGORIES),
 
   transmission: z.enum(TRANSMISSIONS),
   fuelType: z.enum(FUEL_TYPES),

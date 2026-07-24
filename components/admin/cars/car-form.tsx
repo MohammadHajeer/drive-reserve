@@ -61,6 +61,7 @@ import { useUpdateCar } from "@/features/admin/cars/hooks/use-update-car";
 import { useUploadCarImages } from "@/features/admin/cars/hooks/use-upload-car-images";
 import { cn } from "@/lib/utils";
 import { createCarSchema } from "@/lib/validations/cars.validation";
+import { PUBLIC_CAR_CATEGORIES } from "@/lib/cars/public-cars";
 
 type CarFormInput = z.input<typeof createCarSchema>;
 type CarFormValues = z.output<typeof createCarSchema>;
@@ -81,6 +82,11 @@ type CarFormProps =
       mode: "edit";
       initialCar: AdminCar;
     };
+
+const categories = PUBLIC_CAR_CATEGORIES.map((category) => ({
+  label: category.charAt(0).toUpperCase() + category.slice(1),
+  value: category,
+}));
 
 const transmissionOptions = [
   { label: "Automatic", value: "automatic" },
@@ -107,7 +113,14 @@ function defaultValues(car?: AdminCar): CarFormInput {
     year: car?.year ?? new Date().getFullYear(),
     plateNumber: car?.plateNumber ?? "",
     color: car?.color ?? "",
-    category: car?.category ?? "",
+    category:
+      car?.category === "electric" ||
+      car?.category === "suv" ||
+      car?.category === "compact" ||
+      car?.category === "economy" ||
+      car?.category === "luxury"
+        ? car.category
+        : "sedan",
     transmission: car?.transmission === "manual" ? "manual" : "automatic",
     fuelType:
       car?.fuelType === "diesel" ||
@@ -437,11 +450,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
             : "Create car";
 
   return (
-    <form
-      noValidate
-      onSubmit={handleSubmit(submitCar)}
-      className="space-y-6"
-    >
+    <form noValidate onSubmit={handleSubmit(submitCar)} className="space-y-6">
       {partialSuccess ? (
         <div
           role="status"
@@ -511,12 +520,11 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
               autoComplete="off"
               disabled={fieldsDisabled}
             />
-            <CarInputField
+            <CarSelectField
               control={control}
               name="category"
               label="Category"
-              placeholder="SUV, Sedan, Compact..."
-              autoComplete="off"
+              options={categories}
               disabled={fieldsDisabled}
             />
           </FieldGroup>
@@ -580,10 +588,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
             name="description"
             control={control}
             render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                className="gap-2"
-              >
+              <Field data-invalid={fieldState.invalid} className="gap-2">
                 <FieldLabel htmlFor="description">Description</FieldLabel>
                 <Textarea
                   id="description"
@@ -687,7 +692,9 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
           {existingImages.length === 0 && pendingImages.length === 0 ? (
             <div className="rounded-2xl border border-dashed bg-slate-50 px-6 py-10 text-center">
               <ImagePlus className="mx-auto size-8 text-slate-400" />
-              <p className="mt-3 font-medium text-slate-700">No car images yet</p>
+              <p className="mt-3 font-medium text-slate-700">
+                No car images yet
+              </p>
               <p className="mt-1 text-sm text-slate-500">
                 Choose images above to build the vehicle gallery.
               </p>
@@ -878,7 +885,7 @@ function CarSelectField<TValue extends string>({
   disabled,
 }: {
   control: CarFormControl;
-  name: "transmission" | "fuelType" | "status";
+  name: "transmission" | "fuelType" | "status" | "category";
   label: string;
   options: readonly { label: string; value: TValue }[];
   disabled?: boolean;
@@ -947,7 +954,7 @@ function ExistingImageCard({
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border bg-white">
-      <div className="relative aspect-[4/3] bg-slate-100">
+      <div className="relative aspect-4/3 bg-slate-100">
         {/* Supabase storage hosts are configured per environment. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -1006,7 +1013,7 @@ function PendingImageCard({
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-dashed border-blue-200 bg-blue-50/40">
-      <div className="relative aspect-[4/3] bg-slate-100">
+      <div className="relative aspect-4/3 bg-slate-100">
         {/* Blob URLs are local previews and should not use the image optimizer. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
