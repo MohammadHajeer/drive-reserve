@@ -84,6 +84,7 @@ export type PublicCar = Pick<
   | "seats"
   | "price_per_day"
   | "description"
+  | "features"
   | "status"
 >;
 

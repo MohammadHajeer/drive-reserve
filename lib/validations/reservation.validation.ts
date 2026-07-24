@@ -18,8 +18,19 @@ function isValidDateOnly(value: string) {
 
 const dateOnlySchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the YYYY-MM-DD date format.")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the YYYY-MM-DD format.")
   .refine(isValidDateOnly, "Enter a valid date.");
+
+function dateDifferenceInDays(from: string, to: string) {
+  const [fromYear, fromMonth, fromDay] = from.split("-").map(Number);
+  const [toYear, toMonth, toDay] = to.split("-").map(Number);
+
+  return (
+    (Date.UTC(toYear, toMonth - 1, toDay) -
+      Date.UTC(fromYear, fromMonth - 1, fromDay)) /
+    86_400_000
+  );
+}
 
 export const reservationPreviewSchema = z
   .object({
@@ -38,3 +49,33 @@ export const reservationPreviewSchema = z
   });
 
 export type ReservationPreviewInput = z.infer<typeof reservationPreviewSchema>;
+
+export const carUnavailableRangesSchema = z
+  .object({
+    carId: z.string().uuid("Invalid car ID."),
+    from: dateOnlySchema,
+    to: dateOnlySchema,
+  })
+  .superRefine((values, context) => {
+    if (values.to < values.from) {
+      context.addIssue({
+        code: "custom",
+        path: ["to"],
+        message: "The end date must be on or after the start date.",
+      });
+
+      return;
+    }
+
+    if (dateDifferenceInDays(values.from, values.to) > 92) {
+      context.addIssue({
+        code: "custom",
+        path: ["to"],
+        message: "The requested calendar range cannot exceed 93 days.",
+      });
+    }
+  });
+
+export type CarUnavailableRangesInput = z.infer<
+  typeof carUnavailableRangesSchema
+>;

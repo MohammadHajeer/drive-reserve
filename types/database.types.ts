@@ -81,6 +81,7 @@ export type Database = {
           color: string
           created_at: string
           description: string | null
+          features: string[]
           fuel_type: string
           id: string
           model: string
@@ -98,6 +99,7 @@ export type Database = {
           color: string
           created_at?: string
           description?: string | null
+          features?: string[]
           fuel_type: string
           id?: string
           model: string
@@ -115,6 +117,7 @@ export type Database = {
           color?: string
           created_at?: string
           description?: string | null
+          features?: string[]
           fuel_type?: string
           id?: string
           model?: string
@@ -312,6 +315,13 @@ export type Database = {
         }
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_car_unavailable_ranges: {
+        Args: { p_car_id: string; p_from_date: string; p_to_date: string }
+        Returns: {
+          end_date_exclusive: string
+          start_date: string
+        }[]
+      }
       is_car_available: {
         Args: { p_car_id: string; p_pickup_date: string; p_return_date: string }
         Returns: boolean

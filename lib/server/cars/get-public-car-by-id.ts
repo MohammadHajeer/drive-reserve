@@ -12,7 +12,7 @@ export async function getPublicCarById(id: string) {
 
     if (!parsedId.success) {
       return {
-        success: false,
+        success: false as const,
         error: {
           code: "INVALID_CAR_ID",
           message: "The provided car ID is invalid.",
@@ -37,6 +37,7 @@ export async function getPublicCarById(id: string) {
           seats,
           price_per_day,
           description,
+          features,
           status,
           created_at,
           updated_at,
@@ -56,7 +57,7 @@ export async function getPublicCarById(id: string) {
       console.error("Car details error:", error);
 
       return {
-        success: false,
+        success: false as const,
         error: {
           code: "CAR_LOAD_FAILED",
           message: "Unable to load the car.",
@@ -66,7 +67,7 @@ export async function getPublicCarById(id: string) {
 
     if (!car) {
       return {
-        success: false,
+        success: false as const,
         error: {
           code: "CAR_NOT_FOUND",
           message: "The requested car was not found.",
@@ -89,7 +90,7 @@ export async function getPublicCarById(id: string) {
       : [];
 
     return {
-      success: true,
+      success: true as const,
       data: {
         car: {
           id: car.id,
@@ -103,6 +104,7 @@ export async function getPublicCarById(id: string) {
           seats: car.seats,
           pricePerDay: Number(car.price_per_day),
           description: car.description,
+          features: car.features,
           status: car.status,
           images,
           createdAt: car.created_at,
@@ -114,7 +116,7 @@ export async function getPublicCarById(id: string) {
     console.error("Car details load error:", error);
 
     return {
-      success: false,
+      success: false as const,
       error: {
         code: "INTERNAL_SERVER_ERROR",
         message: "An unexpected error occurred.",
