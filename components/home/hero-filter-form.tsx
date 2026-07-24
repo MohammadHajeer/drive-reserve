@@ -113,10 +113,18 @@ export function HeroFilterForm({
   return (
     <div
       id="find-your-car"
-      className="overflow-hidden rounded-3xl border border-white/15 bg-white/95 shadow-2xl shadow-black/40 backdrop-blur-2xl"
+      className="overflow-hidden rounded-3xl border border-border/80 bg-card/95 text-card-foreground shadow-2xl shadow-black/15 backdrop-blur-2xl dark:border-white/10 dark:shadow-black/50"
     >
-      <div className="relative overflow-hidden border-b border-slate-200 bg-linear-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-7 text-white sm:px-7">
-        <div className="absolute -right-14 -top-16 size-48 rounded-full bg-blue-500/25 blur-3xl" />
+      <div className="relative overflow-hidden border-b border-white/10 bg-linear-to-br from-slate-950 via-slate-900 to-blue-950 px-6 py-7 text-white sm:px-7">
+        <div
+          className="absolute -right-14 -top-16 size-48 rounded-full bg-blue-500/25 blur-3xl dark:bg-blue-400/20"
+          aria-hidden="true"
+        />
+
+        <div
+          className="absolute -bottom-20 -left-16 size-52 rounded-full bg-indigo-500/10 blur-3xl"
+          aria-hidden="true"
+        />
 
         <div className="relative">
           <div className="flex items-center justify-between gap-4">
@@ -124,11 +132,11 @@ export function HeroFilterForm({
               Find your ideal match
             </p>
 
-            {selectedCount > 0 && (
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-blue-100">
+            {selectedCount > 0 ? (
+              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-blue-100 backdrop-blur-sm">
                 {selectedCount} selected
               </span>
-            )}
+            ) : null}
           </div>
 
           <h2 className="mt-2 text-2xl font-bold tracking-tight">
@@ -190,14 +198,14 @@ export function HeroFilterForm({
           />
         </div>
 
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+        <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 dark:border-primary/20 dark:bg-primary/10">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/10 dark:bg-primary/15 dark:ring-primary/20">
               <Search className="size-4" aria-hidden="true" />
             </div>
 
             <div>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 {selectedCount > 0
                   ? `${selectedCount} preference${
                       selectedCount === 1 ? "" : "s"
@@ -205,7 +213,7 @@ export function HeroFilterForm({
                   : "Browse the full collection"}
               </p>
 
-              <p className="mt-0.5 text-xs leading-5 text-slate-500">
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
                 Availability and pricing can be checked after choosing a
                 vehicle.
               </p>
@@ -217,7 +225,7 @@ export function HeroFilterForm({
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-xl sm:w-auto"
+            className="h-11 rounded-xl bg-background/60 sm:w-auto dark:bg-background/30"
             disabled={isPending || selectedCount === 0}
             onClick={resetFilters}
           >
@@ -226,7 +234,7 @@ export function HeroFilterForm({
 
           <Button
             type="submit"
-            className="h-11 sm:flex-1 rounded-xl bg-linear-to-r from-blue-500 to-blue-600 font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 hover:shadow-xl"
+            className="h-11 rounded-xl bg-linear-to-r from-blue-500 to-blue-600 font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:shadow-primary/25 sm:flex-1 dark:from-blue-500 dark:to-blue-600 dark:shadow-blue-950/40 dark:hover:from-blue-400 dark:hover:to-blue-600"
             disabled={isPending}
           >
             {isPending ? (
@@ -240,7 +248,9 @@ export function HeroFilterForm({
 
             {isPending ? "Finding cars..." : "View matching cars"}
 
-            {!isPending && <ArrowRight className="size-4" aria-hidden="true" />}
+            {!isPending ? (
+              <ArrowRight className="size-4" aria-hidden="true" />
+            ) : null}
           </Button>
         </div>
       </form>
@@ -262,7 +272,7 @@ function FilterSelect({
     <div className="grid gap-2">
       <label
         htmlFor={id}
-        className="text-xs font-semibold uppercase tracking-wide text-slate-700"
+        className="text-xs font-semibold uppercase tracking-wide text-foreground/75"
       >
         {label}
       </label>
@@ -277,10 +287,10 @@ function FilterSelect({
       >
         <SelectTrigger
           id={id}
-          className="h-12 w-full rounded-xl border-slate-200 bg-white px-3 shadow-sm transition-shadow focus-visible:ring-primary/20"
+          className="h-12 w-full rounded-xl border-border bg-background/70 px-3 text-foreground shadow-sm transition-colors hover:bg-muted/50 focus-visible:border-primary focus-visible:ring-primary/20 dark:bg-background/35 dark:hover:bg-muted/70"
         >
           <span className="flex min-w-0 items-center gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/10 dark:bg-primary/15 dark:ring-primary/20">
               <Icon className="size-4" aria-hidden="true" />
             </span>
 
@@ -288,7 +298,7 @@ function FilterSelect({
           </span>
         </SelectTrigger>
 
-        <SelectContent>
+        <SelectContent className="border-border bg-popover text-popover-foreground">
           <SelectItem value={ALL_VALUE}>{allLabel}</SelectItem>
 
           {options.map((option) => (
