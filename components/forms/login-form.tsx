@@ -21,9 +21,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 type LoginFormProps = {
   initialErrorMessage?: string;
+  redirectTo?: string;
 };
 
-export function LoginForm({ initialErrorMessage }: LoginFormProps) {
+export function LoginForm({ initialErrorMessage, redirectTo }: LoginFormProps) {
   const router = useRouter();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -58,14 +59,23 @@ export function LoginForm({ initialErrorMessage }: LoginFormProps) {
         return;
       }
 
-      toast.success("Signed in successfully. Redirecting to the homepage...");
+      const destination = redirectTo ?? "/";
+      const toastMessage = redirectTo
+        ? "Signed in successfully. Redirecting to your reservation..."
+        : "Signed in successfully. Redirecting to the homepage...";
+
+      toast.success(toastMessage);
       await new Promise((resolve) => window.setTimeout(resolve, 700));
-      router.push("/");
+      router.push(destination);
       router.refresh();
     } catch {
       toast.error("Unable to sign in. Please try again.");
     }
   }
+
+  const registerHref = redirectTo
+    ? `/register?redirectTo=${encodeURIComponent(redirectTo)}`
+    : "/register";
 
   return (
     <div className="space-y-6">
@@ -127,6 +137,16 @@ export function LoginForm({ initialErrorMessage }: LoginFormProps) {
             : "Login to your account"}
         </Button>
       </form>
+
+      <div className="text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <Link
+          href={registerHref}
+          className="font-semibold text-primary underline-offset-4 hover:underline"
+        >
+          Create an account
+        </Link>
+      </div>
     </div>
   );
 }

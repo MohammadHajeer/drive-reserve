@@ -18,10 +18,14 @@ import { FormInputField } from "./form-input-field";
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+type RegisterFormProps = {
+  redirectTo?: string;
+};
+
 const registrationSubmittedMessage =
   "Check your email for a verification link. If you already have an account, sign in or reset your password.";
 
-export function RegisterForm() {
+export function RegisterForm({ redirectTo }: RegisterFormProps) {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const form = useForm<RegisterFormValues>({
@@ -85,6 +89,10 @@ export function RegisterForm() {
     }
   }
 
+  const loginHref = redirectTo
+    ? `/login?redirectTo=${encodeURIComponent(redirectTo)}`
+    : "/login";
+
   if (submittedEmail) {
     return (
       <div className="rounded-2xl border border-emerald-300/30 bg-emerald-50 p-5 text-sm text-emerald-800">
@@ -95,7 +103,7 @@ export function RegisterForm() {
         <p className="mt-2 font-medium">{submittedEmail}</p>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <Link href="/login">
+          <Link href={loginHref}>
             <Button className="rounded-3xl">Sign in</Button>
           </Link>
 

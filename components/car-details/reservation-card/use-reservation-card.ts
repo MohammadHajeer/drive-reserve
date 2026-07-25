@@ -17,6 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
+import { createClient } from "@/lib/supabase/client";
 import type { ReservationPreview } from "@/lib/server/reservations/preview-reservation";
 import type { ReservationPreviewInput } from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
@@ -141,6 +142,14 @@ export function useReservationCard({
             signal: controller.signal,
           },
         );
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error(
+            `Unable to load unavailable dates. The API route was not found or returned an invalid response (${response.status}).`,
+          );
+        }
+
         const payload: unknown = await response.json();
 
         if (!response.ok) {
@@ -235,6 +244,14 @@ export function useReservationCard({
           cache: "no-store",
           signal: controller.signal,
         });
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error(
+            `Unable to check availability. Server returned invalid response (${response.status}).`,
+          );
+        }
+
         const payload: unknown = await response.json();
 
         if (!response.ok) {
@@ -411,7 +428,7 @@ export function useReservationCard({
     previewState,
   ]);
 
-  const handlePrimaryAction = useCallback(() => {
+  const handlePrimaryAction = useCallback(async () => {
     switch (primaryAction.kind) {
       case "open-calendar":
         setCalendarOpen(true);
@@ -426,16 +443,27 @@ export function useReservationCard({
           return;
         }
 
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         const searchParams = new URLSearchParams({
           pickup: pickupDate,
           return: returnDate,
         });
 
-        router.push(
-          `/cars/${encodeURIComponent(
-            carId,
-          )}/reserve?${searchParams.toString()}`,
-        );
+        const targetUrl = `/cars/${encodeURIComponent(
+          carId,
+        )}/confirm-reservation?${searchParams.toString()}`;
+
+        if (session?.user) {
+          router.push(targetUrl);
+        } else {
+          router.push(
+            `/login?redirectTo=${encodeURIComponent(targetUrl)}`,
+          );
+        }
         return;
       }
 

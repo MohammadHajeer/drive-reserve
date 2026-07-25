@@ -16,32 +16,43 @@ export default async function CarDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  
+  
   const result = await getPublicCarById(id);
 
-  const relatedCars = await getRelatedCars({
-    id: result.data?.car.id ?? "",
-    category: result.data?.car.category ?? "",
-    transmission: result.data?.car.transmission ?? "",
-    fuelType: result.data?.car.fuelType ?? "",
-    seats: result.data?.car.seats ?? 0,
-    pricePerDay: result.data?.car.pricePerDay ?? 0,
-  });
-
-  console.log("Related cars:", relatedCars);
-
-  if (!result.success) {
+  
+  if (!result.success || !result.data?.car) {
     if (
-      result.error.code === "INVALID_CAR_ID" ||
-      result.error.code === "CAR_NOT_FOUND"
+      result.error?.code === "INVALID_CAR_ID" ||
+      result.error?.code === "CAR_NOT_FOUND"
     ) {
       notFound();
     }
 
-    throw new Error(result.error.message);
+    throw new Error(result.error?.message || "Failed to load car details");
   }
 
   const { car } = result.data;
   const title = `${car.brand} ${car.model}`;
+
+  
+  let relatedCarsData: any[] = [];
+  try {
+    const relatedResult = await getRelatedCars({
+      id: car.id,
+      category: car.category,
+      transmission: car.transmission,
+      fuelType: car.fuelType,
+      seats: car.seats,
+      pricePerDay: car.pricePerDay,
+    });
+
+    if (relatedResult?.success && Array.isArray(relatedResult.data)) {
+      relatedCarsData = relatedResult.data;
+    }
+  } catch (err) {
+    console.warn("Could not fetch related cars:", err);
+  }
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
@@ -49,7 +60,7 @@ export default async function CarDetailsPage({
         <div className="flex items-center justify-between pb-6">
           <Link
             href="/cars"
-            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Back to Listings
@@ -57,9 +68,10 @@ export default async function CarDetailsPage({
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          
           <div className="space-y-6 lg:col-span-7 xl:col-span-8">
             <CarGallery
-              images={car.images.map((image) => image.url)}
+              images={car.images ? car.images.map((image) => image.url) : []}
               title={title}
             />
 
@@ -97,15 +109,16 @@ export default async function CarDetailsPage({
         </div>
       </div>
 
+      
       <div className="mx-auto mt-12 max-w-7xl">
-        {relatedCars.success && relatedCars.data.length > 0 && (
+        {relatedCarsData.length > 0 && (
           <div>
             <h2 className="mb-6 text-lg font-semibold text-foreground">
               Related Cars
             </h2>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {relatedCars.data.map((relatedCar) => (
+              {relatedCarsData.map((relatedCar) => (
                 <CarCard key={relatedCar.id} car={relatedCar} />
               ))}
             </div>

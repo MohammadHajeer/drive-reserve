@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   CalendarCheck2,
@@ -12,6 +15,7 @@ import {
 
 import { buttonVariants } from "@/components/ui/button";
 import type { PublicCarListItem, PublicCarView } from "@/lib/cars/public-cars";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type CarCardVariant = "listing" | "featured";
@@ -35,9 +39,25 @@ export function CarCard({
   view = "grid",
   variant = "listing",
 }: CarCardProps) {
+  const router = useRouter();
   const detailsHref = `/cars/${car.id}`;
   const isFeatured = variant === "featured";
   const isListView = variant === "listing" && view === "list";
+
+  const handleNavigate = async (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      router.push(detailsHref);
+    } else {
+      router.push(`/login?redirectTo=${encodeURIComponent(detailsHref)}`);
+    }
+  };
 
   return (
     <article
@@ -49,15 +69,25 @@ export function CarCard({
           : "flex h-full flex-col rounded-xl",
       )}
     >
-      <CarImage car={car} href={detailsHref} isListView={isListView} />
+      <CarImage
+        car={car}
+        href={detailsHref}
+        isListView={isListView}
+        onNavigate={handleNavigate}
+      />
 
       {isListView ? (
-        <ListCardContent car={car} detailsHref={detailsHref} />
+        <ListCardContent
+          car={car}
+          detailsHref={detailsHref}
+          onNavigate={handleNavigate}
+        />
       ) : (
         <GridCardContent
           car={car}
           detailsHref={detailsHref}
           isFeatured={isFeatured}
+          onNavigate={handleNavigate}
         />
       )}
     </article>
@@ -68,12 +98,14 @@ type CarImageProps = {
   car: PublicCarListItem;
   href: string;
   isListView: boolean;
+  onNavigate: (e: React.MouseEvent) => Promise<void>;
 };
 
-function CarImage({ car, href, isListView }: CarImageProps) {
+function CarImage({ car, href, isListView, onNavigate }: CarImageProps) {
   return (
-    <Link
+    <a
       href={href}
+      onClick={onNavigate}
       aria-label={`View ${car.brand} ${car.model}`}
       className={cn(
         "relative block overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -117,16 +149,21 @@ function CarImage({ car, href, isListView }: CarImageProps) {
           {titleCase(car.status)}
         </span>
       )}
-    </Link>
+    </a>
   );
 }
 
 type ListCardContentProps = {
   car: PublicCarListItem;
   detailsHref: string;
+  onNavigate: (e: React.MouseEvent) => Promise<void>;
 };
 
-function ListCardContent({ car, detailsHref }: ListCardContentProps) {
+function ListCardContent({
+  car,
+  detailsHref,
+  onNavigate,
+}: ListCardContentProps) {
   return (
     <div className="grid min-w-0 md:min-h-67.5 lg:grid-cols-[minmax(0,1fr)_190px]">
       <div className="flex min-w-0 flex-col p-5 sm:p-6">
@@ -135,14 +172,15 @@ function ListCardContent({ car, detailsHref }: ListCardContentProps) {
             {car.year} {titleCase(car.category)}
           </p>
 
-          <Link
+          <a
             href={detailsHref}
+            onClick={onNavigate}
             className="mt-1 block w-fit rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <h2 className="text-2xl font-bold tracking-tight transition-colors hover:text-primary">
               {car.brand} {car.model}
             </h2>
-          </Link>
+          </a>
 
           <p className="mt-2 text-sm text-muted-foreground">
             A comfortable {car.seats}-seat vehicle with{" "}
@@ -175,13 +213,14 @@ function ListCardContent({ car, detailsHref }: ListCardContentProps) {
         </dl>
 
         <div className="mt-auto hidden pt-5 lg:block">
-          <Link
+          <a
             href={detailsHref}
+            onClick={onNavigate}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
             Explore vehicle details
             <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -214,22 +253,24 @@ function ListCardContent({ car, detailsHref }: ListCardContentProps) {
         </div>
 
         <div className="mt-5 grid gap-2">
-          <Link
-            href={detailsHref}
+          <button
+            type="button"
+            onClick={onNavigate}
             className={cn(buttonVariants(), "h-10 w-full rounded-lg")}
           >
             Book Now
-          </Link>
+          </button>
 
-          <Link
+          <a
             href={detailsHref}
+            onClick={onNavigate}
             className={cn(
               buttonVariants({ variant: "outline" }),
-              "h-10 w-full rounded-lg bg-background",
+              "h-10 w-full rounded-lg bg-background text-center flex items-center justify-center",
             )}
           >
             View Details
-          </Link>
+          </a>
         </div>
       </aside>
     </div>
@@ -240,12 +281,14 @@ type GridCardContentProps = {
   car: PublicCarListItem;
   detailsHref: string;
   isFeatured: boolean;
+  onNavigate: (e: React.MouseEvent) => Promise<void>;
 };
 
 function GridCardContent({
   car,
   detailsHref,
   isFeatured,
+  onNavigate,
 }: GridCardContentProps) {
   const availability = titleCase(car.status);
 
@@ -253,14 +296,15 @@ function GridCardContent({
     <div className="flex min-w-0 flex-1 flex-col p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link
+          <a
             href={detailsHref}
+            onClick={onNavigate}
             className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <h2 className="truncate text-lg font-semibold tracking-tight transition-colors hover:text-primary">
               {car.brand} {car.model}
             </h2>
-          </Link>
+          </a>
 
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span>{car.year}</span>
@@ -312,32 +356,35 @@ function GridCardContent({
 
       {isFeatured ? (
         <div className="mt-auto border-t pt-4">
-          <Link
+          <a
             href={detailsHref}
-            className={cn(buttonVariants(), "h-10 w-full rounded-lg")}
+            onClick={onNavigate}
+            className={cn(buttonVariants(), "h-10 w-full rounded-lg text-center flex items-center justify-center gap-1.5")}
           >
             View Details
             <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+          </a>
         </div>
       ) : (
         <div className="mt-auto grid grid-cols-2 gap-2 border-t pt-4">
-          <Link
+          <a
             href={detailsHref}
+            onClick={onNavigate}
             className={cn(
               buttonVariants({ variant: "outline" }),
-              "h-9 rounded-lg",
+              "h-9 rounded-lg text-center flex items-center justify-center",
             )}
           >
             Details
-          </Link>
+          </a>
 
-          <Link
-            href={detailsHref}
+          <button
+            type="button"
+            onClick={onNavigate}
             className={cn(buttonVariants(), "h-9 rounded-lg")}
           >
             Book Now
-          </Link>
+          </button>
         </div>
       )}
     </div>

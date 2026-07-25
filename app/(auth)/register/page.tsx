@@ -11,7 +11,21 @@ export const metadata: Metadata = {
     "Create a DriveReserve account to reserve vehicles, manage rentals, and access your dashboard.",
 };
 
-export default function RegisterPage() {
+type RegisterPageProps = {
+  searchParams: Promise<{
+    redirectTo?: string;
+  }>;
+};
+
+export default async function RegisterPage({
+  searchParams,
+}: RegisterPageProps) {
+  const { redirectTo } = await searchParams;
+
+  const loginHref = redirectTo
+    ? `/login?redirectTo=${encodeURIComponent(redirectTo)}`
+    : "/login";
+
   return (
     <AuthLayout wide>
       <AuthHeader
@@ -20,12 +34,12 @@ export default function RegisterPage() {
         description="Register with DriveReserve to reserve vehicles, manage rentals, and access your fleet dashboard."
       />
 
-      <RegisterForm />
+      <RegisterForm redirectTo={redirectTo} />
 
       <div className="mt-6 border-t border-border pt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
-          href="/login"
+          href={loginHref}
           className="font-semibold text-primary transition-colors hover:text-primary/80"
         >
           Sign in here
