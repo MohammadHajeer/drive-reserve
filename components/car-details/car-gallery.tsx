@@ -27,7 +27,7 @@ export function CarGallery({ images, title }: CarGalleryProps) {
   return (
     <div className="space-y-4">
       {/* Main Image Display */}
-      <div className="relative h-[340px] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm group sm:h-[420px]">
+      <div className="relative h-85 w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm group sm:h-105">
         {mainImage ? (
           // Storage hostnames vary by environment and are not known at build time.
           // eslint-disable-next-line @next/next/no-img-element

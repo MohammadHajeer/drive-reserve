@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-interface FareSummaryCardProps {
-  dailyPrice?: number;
-  days?: number;
-  serviceFee?: number;
-  taxRate?: number;
-  agreeToTerms?: boolean;
-  onAgreeChange?: (agreed: boolean) => void;
-  onConfirm?: () => void;
-}
+import { LoaderCircle } from "lucide-react";
+
+type FareSummaryCardProps = {
+  dailyPrice: number;
+  days: number;
+  totalPrice: number;
+  agreeToTerms: boolean;
+  onAgreeChange: (agreed: boolean) => void;
+  onConfirm: () => void;
+  disabled: boolean;
+  isLoading: boolean;
+};
 
 export function FareSummaryCard({
-  dailyPrice = 149,
-  days = 3,
-  serviceFee = 45,
-  taxRate = 0.08,
-  agreeToTerms = false,
+  dailyPrice,
+  days,
+  totalPrice,
+  agreeToTerms,
   onAgreeChange,
   onConfirm,
+  disabled,
+  isLoading,
 }: FareSummaryCardProps) {
-  const rentalTotal = dailyPrice * days;
-  const estimatedTax = Math.round((rentalTotal + serviceFee) * taxRate);
-  const totalAmount = rentalTotal + serviceFee + estimatedTax;
-
   return (
     <div className="bg-card text-card-foreground rounded-xl border p-6 shadow-sm sticky top-24 space-y-6">
       <h3 className="text-lg font-semibold border-b pb-3">Fare Summary</h3>
@@ -30,24 +30,19 @@ export function FareSummaryCard({
       <div className="space-y-3 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>
-            Vehicle Rental (${dailyPrice} × {days} days)
+            Vehicle Rental (${dailyPrice.toFixed(2)} × {days}{" "}
+            {days === 1 ? "day" : "days"})
           </span>
-          <span className="font-medium text-foreground">${rentalTotal.toFixed(2)}</span>
-        </div>
-
-        <div className="flex justify-between text-muted-foreground">
-          <span>Service & Facility Fee</span>
-          <span className="font-medium text-foreground">${serviceFee.toFixed(2)}</span>
-        </div>
-
-        <div className="flex justify-between text-muted-foreground">
-          <span>Estimated Taxes</span>
-          <span className="font-medium text-foreground">${estimatedTax.toFixed(2)}</span>
+          <span className="font-medium text-foreground">
+            ${totalPrice.toFixed(2)}
+          </span>
         </div>
 
         <div className="border-t pt-3 flex justify-between items-center font-bold text-base">
           <span>Total Amount</span>
-          <span className="text-primary text-xl">${totalAmount.toFixed(2)}</span>
+          <span className="text-primary text-xl">
+            ${totalPrice.toFixed(2)}
+          </span>
         </div>
       </div>
 
@@ -56,15 +51,16 @@ export function FareSummaryCard({
           <input
             type="checkbox"
             checked={agreeToTerms}
-            onChange={(e) => onAgreeChange?.(e.target.checked)}
+            onChange={(event) => onAgreeChange(event.target.checked)}
+            disabled={disabled}
             className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
           />
           <span>
-            I agree to the{' '}
+            I agree to the{" "}
             <a href="#" className="text-primary hover:underline">
               Rental Terms
             </a>
-            ,{' '}
+            ,{" "}
             <a href="#" className="text-primary hover:underline">
               Privacy Policy
             </a>
@@ -75,9 +71,17 @@ export function FareSummaryCard({
         <button
           type="button"
           onClick={onConfirm}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-xl shadow transition-colors"
+          disabled={disabled}
+          className="flex w-full items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-xl shadow transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Confirm & Reserve
+          {isLoading ? (
+            <>
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              Submitting...
+            </>
+          ) : (
+            "Confirm & Reserve"
+          )}
         </button>
       </div>
     </div>

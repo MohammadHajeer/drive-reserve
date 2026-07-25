@@ -37,41 +37,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  if (parsed.data.pickupDate < today) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "PICKUP_DATE_IN_PAST",
-          message: "Pickup date cannot be in the past.",
-          fieldErrors: {
-            pickupDate: ["Pickup date cannot be in the past."],
-          },
-        },
-      },
-      { status: 400 },
-    );
-  }
-
-  const rentalDays =
-    (Date.parse(parsed.data.returnDate) - Date.parse(parsed.data.pickupDate)) /
-    86_400_000;
-
-  if (rentalDays > 30) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "RENTAL_PERIOD_TOO_LONG",
-          message: "A reservation cannot exceed 30 days.",
-        },
-      },
-      { status: 400 },
-    );
-  }
-
   try {
     const preview = await previewReservation(parsed.data);
 

@@ -42,6 +42,7 @@ export const CUSTOMER_ONLY_ROUTES = [
   "/profile",
   "/my-reservations",
   "/reservations",
+  /^\/cars\/[^/]+\/confirm-reservation$/,
 ] as const;
 
 /*
@@ -56,10 +57,12 @@ export const UNAUTHORIZED_ROUTE = "/unauthorized";
 
 export function matchesRoute(
   pathname: string,
-  routes: readonly string[],
+  routes: readonly (string | RegExp)[],
 ): boolean {
-  return routes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  return routes.some((route) =>
+    typeof route === "string"
+      ? pathname === route || pathname.startsWith(`${route}/`)
+      : route.test(pathname),
   );
 }
 

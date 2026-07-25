@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import {
-  addDays,
   addMonths,
   endOfMonth,
   startOfDay,
@@ -17,9 +16,11 @@ import {
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
-import { createClient } from "@/lib/supabase/client";
 import type { ReservationPreview } from "@/lib/server/reservations/preview-reservation";
-import type { ReservationPreviewInput } from "@/lib/validations/reservation.validation";
+import {
+  MAX_RENTAL_DAYS,
+  type ReservationPreviewInput,
+} from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
 
 import {
@@ -32,7 +33,7 @@ import {
 
 const DESKTOP_CALENDAR_QUERY = "(min-width: 768px)";
 
-export const MAX_RENTAL_DAYS = 30;
+export { MAX_RENTAL_DAYS } from "@/lib/validations/reservation.validation";
 
 type CalendarLoadState =
   | { status: "loading" }
@@ -230,8 +231,6 @@ export function useReservationCard({
       pickupDate,
       returnDate,
     } satisfies ReservationPreviewInput;
-
-    setPreviewState({ status: "loading" });
 
     async function loadReservationPreview() {
       try {
@@ -443,11 +442,6 @@ export function useReservationCard({
           return;
         }
 
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
         const searchParams = new URLSearchParams({
           pickup: pickupDate,
           return: returnDate,
@@ -457,13 +451,7 @@ export function useReservationCard({
           carId,
         )}/confirm-reservation?${searchParams.toString()}`;
 
-        if (session?.user) {
-          router.push(targetUrl);
-        } else {
-          router.push(
-            `/login?redirectTo=${encodeURIComponent(targetUrl)}`,
-          );
-        }
+        router.push(targetUrl);
         return;
       }
 
