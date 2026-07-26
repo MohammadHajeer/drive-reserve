@@ -447,7 +447,7 @@ function AuthenticatedActions({
                 Admin dashboard
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem render={<Link href="/account" />}>
+              <DropdownMenuItem render={<Link href="/profile" />}>
                 <UserRound className="size-4" aria-hidden="true" />
                 Account
               </DropdownMenuItem>
@@ -556,7 +556,7 @@ function MobileAuthenticatedActions({
 
         {isCustomer && (
           <Link
-            href="/account"
+            href="/profile"
             onClick={closeMenu}
             className={cn(
               buttonVariants({
