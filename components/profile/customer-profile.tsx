@@ -16,7 +16,7 @@ export function CustomerProfileContent() {
   const profileQuery = useCustomerProfile();
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       {profileQuery.isPending ? (
         <ProfileHeaderSkeleton />
       ) : profileQuery.isError ? (
@@ -44,7 +44,7 @@ export function CustomerProfileContent() {
 
 function ProfileError({ onRetry }: { onRetry: () => void }) {
   return (
-    <Card className="border-destructive/20 bg-destructive/[0.03]">
+    <Card className="border-destructive/20 bg-destructive/3">
       <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />

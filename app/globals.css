@@ -210,3 +210,7 @@ html {
 @utility container-paddings {
   @apply px-4 sm:px-6 lg:px-8;
 }
+
+html {
+  scrollbar-gutter: stable;
+}
