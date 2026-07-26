@@ -1,0 +1,9 @@
+"use client";
+import Link from "next/link";
+import { CalendarDays, CarFront, Check, Eye, X } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import type { AdminReservation } from "@/features/admin/reservations/admin-reservation.types";
+import { cn } from "@/lib/utils";
+import { ReservationStatusBadge } from "./reservation-status-badge";
+const money=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+export function ReservationsMobileList({reservations,onApprove,onReject}:{reservations:readonly AdminReservation[];onApprove:(r:AdminReservation)=>void;onReject:(r:AdminReservation)=>void}){return <div className="space-y-3 md:hidden">{reservations.map((r)=><article key={r.id} className="rounded-2xl border bg-card p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="font-bold">{r.reference}</p><p className="mt-1 text-sm text-muted-foreground">{r.customer.fullName}</p></div><ReservationStatusBadge status={r.status}/></div><div className="mt-4 grid gap-3 text-sm"><p className="flex items-center gap-2"><CarFront className="size-4 text-muted-foreground"/>{r.car.brand} {r.car.model} · {r.car.plateNumber}</p><p className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{r.pickupDate} → {r.returnDate} ({r.rentalDays} days)</p><p className="font-semibold">Total: {money.format(r.totalPrice)}</p></div><div className="mt-4 flex flex-wrap gap-2"><Link href={`/admin/reservations/${r.id}`} className={cn(buttonVariants({variant:"outline",size:"sm"}),"rounded-lg")}><Eye/>View</Link>{r.status==="pending"&&<><Button size="sm" onClick={()=>onApprove(r)}><Check/>Approve</Button><Button size="sm" variant="destructive" onClick={()=>onReject(r)}><X/>Reject</Button></>}</div></article>)}</div>}
