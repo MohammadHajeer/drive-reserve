@@ -8,6 +8,11 @@ import { CarSpecs } from "@/components/car-details/car-specs";
 import { ReservationCard } from "@/components/car-details/reservation-card";
 import { getPublicCarById } from "@/lib/server/cars/get-public-car-by-id";
 import { getRelatedCars } from "@/lib/server/cars/get-related-cars";
+
+type RelatedCarsSuccess = Extract<
+  Awaited<ReturnType<typeof getRelatedCars>>,
+  { success: true }
+>;
 import { CarCard } from "@/components/cars/car-card";
 
 export default async function CarDetailsPage({
@@ -36,7 +41,7 @@ export default async function CarDetailsPage({
   const title = `${car.brand} ${car.model}`;
 
   
-  let relatedCarsData: any[] = [];
+  let relatedCarsData: RelatedCarsSuccess["data"] = [];
   try {
     const relatedResult = await getRelatedCars({
       id: car.id,

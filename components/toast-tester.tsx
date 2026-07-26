@@ -78,7 +78,7 @@ export function ToastTester() {
       action: {
         label: "View",
         onClick: () => {
-          window.location.href = "/reservations";
+          window.location.href = "/my-reservations";
         },
       },
     });

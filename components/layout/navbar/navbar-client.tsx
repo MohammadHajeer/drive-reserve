@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   ArrowRight,
   CalendarDays,
@@ -15,7 +15,6 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -27,7 +26,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/client";
+import { useLogout } from "@/features/auth/hooks/use-logout";
+import { APP_ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 export type NavbarUser = {
@@ -43,11 +43,11 @@ type NavbarClientProps = {
 const navigation = [
   {
     label: "Home",
-    href: "/",
+    href: APP_ROUTES.home,
   },
   {
     label: "Cars",
-    href: "/cars",
+    href: APP_ROUTES.cars,
   },
 ];
 
@@ -65,16 +65,18 @@ function getUserInitial(email: string | null) {
 
 export function NavbarClient({ user }: NavbarClientProps) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { logout, isLoggingOut } = useLogout();
 
-  const isHomePage = pathname === "/";
+  const isHomePage = pathname === APP_ROUTES.home;
   const isTransparent = isHomePage && !isScrolled && !isOpen;
 
-  const dashboardHref = user?.role === "admin" ? "/admin" : "/reservations";
+  const dashboardHref =
+    user?.role === "admin"
+      ? APP_ROUTES.admin
+      : APP_ROUTES.customerReservations;
 
   const dashboardLabel =
     user?.role === "admin" ? "Admin dashboard" : "My reservations";
@@ -82,30 +84,8 @@ export function NavbarClient({ user }: NavbarClientProps) {
   const DashboardIcon = user?.role === "admin" ? LayoutDashboard : CalendarDays;
 
   async function handleLogout() {
-    if (isLoggingOut) {
-      return;
-    }
-
-    setIsLoggingOut(true);
-
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        throw error;
-      }
-
-      setIsOpen(false);
-      router.replace("/");
-      router.refresh();
-      toast.success("Signed out successfully.");
-    } catch (error) {
-      console.error("Failed to sign out:", error);
-      toast.error("Unable to sign out. Please try again.");
-    } finally {
-      setIsLoggingOut(false);
-    }
+    setIsOpen(false);
+    await logout();
   }
 
   useEffect(() => {
@@ -320,7 +300,7 @@ function GuestActions({ isTransparent }: { isTransparent: boolean }) {
   return (
     <>
       <Link
-        href="/login"
+        href={APP_ROUTES.login}
         className={cn(
           buttonVariants({
             variant: "ghost",
@@ -335,7 +315,7 @@ function GuestActions({ isTransparent }: { isTransparent: boolean }) {
       </Link>
 
       <Link
-        href="/cars"
+        href={APP_ROUTES.cars}
         className={cn(
           buttonVariants({ size: "sm" }),
           "h-10 rounded-lg bg-linear-to-r from-blue-500 to-blue-600 px-5 font-semibold text-white",
@@ -442,12 +422,14 @@ function AuthenticatedActions({
             </DropdownMenuLabel>
 
             {user.role === "admin" ? (
-              <DropdownMenuItem render={<Link href="/admin" />}>
+              <DropdownMenuItem render={<Link href={APP_ROUTES.admin} />}>
                 <LayoutDashboard className="size-4" aria-hidden="true" />
                 Admin dashboard
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem render={<Link href="/profile" />}>
+              <DropdownMenuItem
+                render={<Link href={APP_ROUTES.customerProfile} />}
+              >
                 <UserRound className="size-4" aria-hidden="true" />
                 Account
               </DropdownMenuItem>
@@ -475,7 +457,7 @@ function MobileGuestActions({ closeMenu }: { closeMenu: () => void }) {
   return (
     <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-4">
       <Link
-        href="/login"
+        href={APP_ROUTES.login}
         onClick={closeMenu}
         className={cn(
           buttonVariants({
@@ -488,7 +470,7 @@ function MobileGuestActions({ closeMenu }: { closeMenu: () => void }) {
       </Link>
 
       <Link
-        href="/cars"
+        href={APP_ROUTES.cars}
         onClick={closeMenu}
         className={cn(
           buttonVariants(),
@@ -556,7 +538,7 @@ function MobileAuthenticatedActions({
 
         {isCustomer && (
           <Link
-            href="/profile"
+            href={APP_ROUTES.customerProfile}
             onClick={closeMenu}
             className={cn(
               buttonVariants({
