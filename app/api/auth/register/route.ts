@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { registerSchema } from "@/lib/validations/auth.validation";
+import { registrationRequestSchema } from "@/lib/validations/auth.validation";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const parsed = registerSchema.safeParse(body);
+    const parsed = registrationRequestSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -38,19 +38,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const { fullName, email, phone, password } = parsed.data;
+    const { fullName, email, phone, password, redirectTo } = parsed.data;
 
     const supabase = await createClient();
 
     const siteUrl = (
       process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
     ).replace(/\/$/, "");
+    const emailConfirmationUrl = new URL(
+      "/api/auth/confirm",
+      `${siteUrl}/`,
+    );
+
+    if (redirectTo) {
+      emailConfirmationUrl.searchParams.set("redirectTo", redirectTo);
+    }
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${siteUrl}/api/auth/confirm`,
+        emailRedirectTo: emailConfirmationUrl.toString(),
         data: {
           full_name: fullName,
           phone: phone || null,

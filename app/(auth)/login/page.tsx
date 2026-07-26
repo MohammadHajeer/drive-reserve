@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AuthHeader } from "@/components/auth/auth-header";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { LoginForm } from "@/components/forms/login-form";
+import { getSafeInternalRedirectPath } from "@/lib/validations/auth.validation";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -13,21 +14,22 @@ export const metadata: Metadata = {
 
 type LoginPageProps = {
   searchParams: Promise<{
-    redirectTo?: string;
-    error?: string;
+    redirectTo?: string | string[];
+    error?: string | string[];
   }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { redirectTo, error } = await searchParams;
+  const safeRedirectTo = getSafeInternalRedirectPath(redirectTo);
 
   const initialErrorMessage =
     error === "login-failed"
       ? "Unable to sign in. Please check your credentials."
       : undefined;
 
-  const registerHref = redirectTo
-    ? `/register?redirectTo=${encodeURIComponent(redirectTo)}`
+  const registerHref = safeRedirectTo
+    ? `/register?redirectTo=${encodeURIComponent(safeRedirectTo)}`
     : "/register";
 
   return (
@@ -40,7 +42,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <LoginForm
         initialErrorMessage={initialErrorMessage}
-        redirectTo={redirectTo}
+        redirectTo={safeRedirectTo}
       />
 
       <div className="mt-6 border-t border-border pt-6 text-center text-sm text-muted-foreground">

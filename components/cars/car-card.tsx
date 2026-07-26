@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -15,7 +14,6 @@ import {
 
 import { buttonVariants } from "@/components/ui/button";
 import type { PublicCarListItem, PublicCarView } from "@/lib/cars/public-cars";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type CarCardVariant = "listing" | "featured";
@@ -47,16 +45,7 @@ export function CarCard({
   const handleNavigate = async (e: React.MouseEvent) => {
     e.preventDefault();
 
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session?.user) {
-      router.push(detailsHref);
-    } else {
-      router.push(`/login?redirectTo=${encodeURIComponent(detailsHref)}`);
-    }
+    router.push(detailsHref);
   };
 
   return (
@@ -359,7 +348,10 @@ function GridCardContent({
           <a
             href={detailsHref}
             onClick={onNavigate}
-            className={cn(buttonVariants(), "h-10 w-full rounded-lg text-center flex items-center justify-center gap-1.5")}
+            className={cn(
+              buttonVariants(),
+              "h-10 w-full rounded-lg text-center flex items-center justify-center gap-1.5",
+            )}
           >
             View Details
             <ArrowRight className="size-4" aria-hidden="true" />

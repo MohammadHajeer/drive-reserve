@@ -92,7 +92,7 @@ export function createLoginUrl(request: NextRequest) {
 
   const requestedPath = request.nextUrl.pathname + request.nextUrl.search;
 
-  loginUrl.searchParams.set("next", requestedPath);
+  loginUrl.searchParams.set("redirectTo", requestedPath);
 
   return loginUrl;
 }

@@ -51,6 +51,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
         body: JSON.stringify({
           ...values,
           phone: values.phone?.trim() || null,
+          redirectTo,
         }),
       });
 

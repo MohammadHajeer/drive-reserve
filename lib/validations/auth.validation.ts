@@ -1,5 +1,32 @@
 import { z } from "zod";
 
+const INTERNAL_REDIRECT_BASE_URL = "https://drive-reserve.internal";
+
+export const internalRedirectPathSchema = z.string().refine((value) => {
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\") ||
+    /[\u0000-\u001F\u007F]/.test(value)
+  ) {
+    return false;
+  }
+
+  try {
+    const redirectUrl = new URL(value, INTERNAL_REDIRECT_BASE_URL);
+
+    return redirectUrl.origin === INTERNAL_REDIRECT_BASE_URL;
+  } catch {
+    return false;
+  }
+}, "Enter a valid internal redirect path");
+
+export function getSafeInternalRedirectPath(value: unknown) {
+  const parsed = internalRedirectPathSchema.safeParse(value);
+
+  return parsed.success ? parsed.data : undefined;
+}
+
 const phoneSchema = z
   .union([
     z
@@ -58,6 +85,10 @@ export const registerSchema = z
   });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const registrationRequestSchema = registerSchema.safeExtend({
+  redirectTo: internalRedirectPathSchema.optional(),
+});
 
 export const updateProfileSchema = z
   .object({
