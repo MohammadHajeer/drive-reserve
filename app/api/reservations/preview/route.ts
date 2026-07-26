@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { previewReservation } from "@/lib/server/reservations/preview-reservation";
+import {
+  previewReservation,
+  ReservationPreviewValidationError,
+} from "@/lib/server/reservations/preview-reservation";
 import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
 
 export async function POST(request: Request) {
@@ -78,6 +81,24 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
+    if (error instanceof ReservationPreviewValidationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        },
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "private, no-store",
+          },
+        },
+      );
+    }
+
     console.error("Reservation preview route error:", error);
 
     return NextResponse.json(

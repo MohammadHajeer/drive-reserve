@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
+import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
+
 import { CarSummaryCard } from "./car-summary-card";
 import { FareSummaryCard } from "./fare-summary-card";
 import { PaymentMethodSelector } from "./payment-method-selector";
@@ -92,6 +94,23 @@ export function ConfirmReservationContent({
 
     if (!agreeToTerms) {
       toast.error("Please agree to the rental terms before confirming.");
+      return;
+    }
+
+    const parsedDates = reservationPreviewSchema.safeParse({
+      carId: car.id,
+      pickupDate,
+      returnDate,
+    });
+
+    if (!parsedDates.success) {
+      const fieldErrors = parsedDates.error.flatten().fieldErrors;
+      const message =
+        fieldErrors.pickupDate?.[0] ??
+        fieldErrors.returnDate?.[0] ??
+        "Choose a valid pickup and return date range.";
+
+      toast.error(message);
       return;
     }
 

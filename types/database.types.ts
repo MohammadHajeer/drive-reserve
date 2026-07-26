@@ -340,6 +340,7 @@ export type Database = {
           unavailable_reason: string
         }[]
       }
+      reject_expired_pending_reservations: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "customer" | "admin"

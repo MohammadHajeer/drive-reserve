@@ -5,7 +5,11 @@ import { ArrowLeft } from "lucide-react";
 import { ReservationCard } from "@/components/car-details/reservation-card";
 import { ConfirmReservationContent } from "@/components/reservation/confirm-reservation-content";
 import { getPublicCarById } from "@/lib/server/cars/get-public-car-by-id";
-import { previewReservation } from "@/lib/server/reservations/preview-reservation";
+import {
+  previewReservation,
+  ReservationPreviewValidationError,
+  type ReservationPreview,
+} from "@/lib/server/reservations/preview-reservation";
 import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
 
@@ -140,7 +144,17 @@ export default async function ConfirmReservationPage({
     );
   }
 
-  const preview = await previewReservation(parsedDates.data);
+  let preview: ReservationPreview;
+
+  try {
+    preview = await previewReservation(parsedDates.data);
+  } catch (error) {
+    if (error instanceof ReservationPreviewValidationError) {
+      return <ReservationDateIssue car={car} message={error.message} />;
+    }
+
+    throw error;
+  }
 
   if (preview.unavailableReason === "CAR_NOT_FOUND") {
     notFound();

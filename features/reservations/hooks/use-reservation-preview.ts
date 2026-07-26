@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
+
 import { reservationQueryKeys } from "../reservation-query-keys";
 import {
   fetchReservationPreview,
@@ -15,12 +17,7 @@ import type {
 function canPreviewReservation(
   input: ReservationPreviewInput | null,
 ): input is ReservationPreviewInput {
-  return Boolean(
-    input?.carId &&
-    input.pickupDate &&
-    input.returnDate &&
-    input.returnDate > input.pickupDate,
-  );
+  return input !== null && reservationPreviewSchema.safeParse(input).success;
 }
 
 export function useReservationPreview(input: ReservationPreviewInput | null) {

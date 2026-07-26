@@ -10,7 +10,6 @@ import {
 import {
   addMonths,
   endOfMonth,
-  startOfDay,
   startOfMonth,
 } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -18,13 +17,20 @@ import type { DateRange } from "react-day-picker";
 
 import type { ReservationPreview } from "@/lib/server/reservations/preview-reservation";
 import {
+  addDaysToDateOnly,
+  getBeirutDateOnly,
+  getEarliestPickupDateOnly,
+} from "@/lib/reservations/reservation-date";
+import {
   MAX_RENTAL_DAYS,
+  reservationPreviewSchema,
   type ReservationPreviewInput,
 } from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
 
 import {
   formatDateOnly,
+  parseDateOnly,
   parseReservationPreview,
   parseUnavailableRanges,
   readErrorMessage,
@@ -32,6 +38,22 @@ import {
 } from "./reservation-card.utils";
 
 const DESKTOP_CALENDAR_QUERY = "(min-width: 768px)";
+
+function getReservationDateError(input: ReservationPreviewInput): string | null {
+  const parsed = reservationPreviewSchema.safeParse(input);
+
+  if (parsed.success) {
+    return null;
+  }
+
+  const fieldErrors = parsed.error.flatten().fieldErrors;
+
+  return (
+    fieldErrors.pickupDate?.[0] ??
+    fieldErrors.returnDate?.[0] ??
+    "Choose a valid pickup and return date range."
+  );
+}
 
 export { MAX_RENTAL_DAYS } from "@/lib/validations/reservation.validation";
 
@@ -64,11 +86,19 @@ export function useReservationCard({
   status,
 }: UseReservationCardInput) {
   const router = useRouter();
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const [beirutToday, setBeirutToday] = useState(getBeirutDateOnly);
+  const earliestPickupDate = useMemo(
+    () =>
+      parseDateOnly(addDaysToDateOnly(beirutToday, 1)) ??
+      new Date(),
+    [beirutToday],
+  );
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [displayedMonth, setDisplayedMonth] = useState(() =>
-    startOfMonth(new Date()),
+    startOfMonth(
+      parseDateOnly(getEarliestPickupDateOnly()) ?? new Date(),
+    ),
   );
   const [numberOfMonths, setNumberOfMonths] = useState(1);
   const [selectedRange, setSelectedRange] = useState<DateRange>();
@@ -88,6 +118,14 @@ export function useReservationCard({
     new Map<string, UnavailableDateRange[]>(),
   );
   const previewAbortController = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setBeirutToday(getBeirutDateOnly());
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_CALENDAR_QUERY);
@@ -223,14 +261,23 @@ export function useReservationCard({
       return;
     }
 
-    const controller = new AbortController();
-    previewAbortController.current = controller;
-
     const requestBody = {
       carId,
       pickupDate,
       returnDate,
     } satisfies ReservationPreviewInput;
+    const dateError = getReservationDateError(requestBody);
+
+    if (dateError) {
+      const timeout = window.setTimeout(() => {
+        setPreviewState({ status: "error", message: dateError });
+      }, 0);
+
+      return () => window.clearTimeout(timeout);
+    }
+
+    const controller = new AbortController();
+    previewAbortController.current = controller;
 
     async function loadReservationPreview() {
       try {
@@ -303,6 +350,7 @@ export function useReservationCard({
       }
     };
   }, [
+    beirutToday,
     carId,
     pickupDate,
     previewRetryAttempt,
@@ -442,6 +490,18 @@ export function useReservationCard({
           return;
         }
 
+        const dateError = getReservationDateError({
+          carId,
+          pickupDate,
+          returnDate,
+        });
+
+        if (dateError) {
+          setPreviewState({ status: "error", message: dateError });
+          setCalendarOpen(true);
+          return;
+        }
+
         const searchParams = new URLSearchParams({
           pickup: pickupDate,
           return: returnDate,
@@ -481,13 +541,16 @@ export function useReservationCard({
       unavailableRanges
         .filter(
           (range) =>
-            range.isMine && range.to >= today,
+            range.isMine && range.to >= earliestPickupDate,
         )
         .map((range) => ({
-          from: range.from < today ? today : range.from,
+          from:
+            range.from < earliestPickupDate
+              ? earliestPickupDate
+              : range.from,
           to: range.to,
         })),
-    [today, unavailableRanges],
+    [earliestPickupDate, unavailableRanges],
   );
 
   const otherReservationRanges = useMemo(
@@ -495,13 +558,16 @@ export function useReservationCard({
       unavailableRanges
         .filter(
           (range) =>
-            !range.isMine && range.to >= today,
+            !range.isMine && range.to >= earliestPickupDate,
         )
         .map((range) => ({
-          from: range.from < today ? today : range.from,
+          from:
+            range.from < earliestPickupDate
+              ? earliestPickupDate
+              : range.from,
           to: range.to,
         })),
-    [today, unavailableRanges],
+    [earliestPickupDate, unavailableRanges],
   );
 
   const hasMyReservations =
@@ -524,7 +590,7 @@ export function useReservationCard({
       numberOfMonths,
       selectedRange,
       onRangeSelect: handleRangeSelect,
-      today,
+      earliestPickupDate,
       loadState,
       onRetryUnavailableRanges:
         retryUnavailableRanges,

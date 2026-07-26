@@ -47,10 +47,13 @@ function mapReservationRpcError(message: string): ReservationRpcError {
     };
   }
 
-  if (message.includes("Pickup date cannot be in the past")) {
+  if (
+    message.includes("Pickup date must be after today") ||
+    message.includes("Pickup date cannot be in the past")
+  ) {
     return {
-      code: "PICKUP_DATE_IN_PAST",
-      message: "Pickup date cannot be in the past.",
+      code: "PICKUP_DATE_NOT_AFTER_TODAY",
+      message: "Pickup date must be after today.",
       status: 400,
     };
   }

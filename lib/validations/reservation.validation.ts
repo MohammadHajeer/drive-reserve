@@ -1,39 +1,19 @@
 import { z } from "zod";
 
+import {
+  addDaysToDateOnly,
+  dateDifferenceInDays,
+  getBeirutDateOnly,
+  isValidDateOnly,
+} from "@/lib/reservations/reservation-date";
+
 export const MAX_RENTAL_DAYS = 30;
 export const MAX_BOOKING_HORIZON_DAYS = 180;
-
-function isValidDateOnly(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-
-  if (!year || !month || !day) {
-    return false;
-  }
-
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  );
-}
 
 const dateOnlySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the YYYY-MM-DD format.")
   .refine(isValidDateOnly, "Enter a valid date.");
-
-function dateDifferenceInDays(from: string, to: string) {
-  const [fromYear, fromMonth, fromDay] = from.split("-").map(Number);
-  const [toYear, toMonth, toDay] = to.split("-").map(Number);
-
-  return (
-    (Date.UTC(toYear, toMonth - 1, toDay) -
-      Date.UTC(fromYear, fromMonth - 1, fromDay)) /
-    86_400_000
-  );
-}
 
 export const reservationPreviewSchema = z
   .object({
@@ -42,13 +22,14 @@ export const reservationPreviewSchema = z
     returnDate: dateOnlySchema,
   })
   .superRefine((values, context) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getBeirutDateOnly();
+    const earliestPickupDate = addDaysToDateOnly(today, 1);
 
-    if (values.pickupDate < today) {
+    if (values.pickupDate < earliestPickupDate) {
       context.addIssue({
         code: "custom",
         path: ["pickupDate"],
-        message: "Pickup date cannot be in the past.",
+        message: "Pickup date must be after today.",
       });
     }
 

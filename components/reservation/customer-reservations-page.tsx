@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CustomerReservation } from "@/features/customer/reservations/customer-reservations.schema";
 import { useCustomerReservations } from "@/features/customer/reservations/hooks/use-customer-reservations";
 import { APP_ROUTES } from "@/lib/routes";
+import { parseDateOnly } from "@/lib/reservations/reservation-date";
 import { cn } from "@/lib/utils";
 import type { ReservationStatus } from "@/types/domain";
 
@@ -230,7 +231,7 @@ function ReservationCard({ reservation }: { reservation: CustomerReservation }) 
   return (
     <Card size="sm">
       <CardContent className="grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:items-center">
-        <div className="relative flex h-20 items-center justify-center overflow-hidden rounded-2xl bg-muted sm:h-16">
+        <div className="relative flex h-60 items-center justify-center overflow-hidden rounded-2xl bg-muted sm:h-16">
           {reservation.car.imageUrl ? (
             <Image
               src={reservation.car.imageUrl}
@@ -340,7 +341,9 @@ function ReservationsEmpty({ filtered }: { filtered: boolean }) {
 }
 
 function formatDate(date: string) {
-  return dateFormatter.format(new Date(`${date}T00:00:00Z`));
+  const parsedDate = parseDateOnly(date);
+
+  return parsedDate ? dateFormatter.format(parsedDate) : date;
 }
 
 function capitalize(value: string) {

@@ -34,7 +34,7 @@ type ReservationCalendarProps = {
   numberOfMonths: number;
   selectedRange: DateRange | undefined;
   onRangeSelect: (range: DateRange | undefined) => void;
-  today: Date;
+  earliestPickupDate: Date;
   loadState: CalendarLoadState;
   onRetryUnavailableRanges: () => void;
   calendarIsUnavailable: boolean;
@@ -53,7 +53,7 @@ export function ReservationCalendar({
   numberOfMonths,
   selectedRange,
   onRangeSelect,
-  today,
+  earliestPickupDate,
   loadState,
   onRetryUnavailableRanges,
   calendarIsUnavailable,
@@ -117,22 +117,25 @@ export function ReservationCalendar({
             pagedNavigation
             selected={selectedRange}
             onSelect={onRangeSelect}
-            min={1}
-            max={maxRentalDays}
+            min={2}
+            max={maxRentalDays + 1}
             excludeDisabled
             resetOnSelect
             disabled={
               calendarIsUnavailable
                 ? true
-                : [{ before: today }, ...allUnavailableRanges]
+                : [
+                    { before: earliestPickupDate },
+                    ...allUnavailableRanges,
+                  ]
             }
             modifiers={{
-              past: { before: today },
+              pickupTooEarly: { before: earliestPickupDate },
               reserved: otherReservationRanges,
               myReservation: myReservationRanges,
             }}
             modifiersClassNames={{
-              past: [
+              pickupTooEarly: [
                 "!bg-transparent",
                 "!text-muted-foreground/35",
                 "!opacity-45",
@@ -204,7 +207,8 @@ export function ReservationCalendar({
             </div>
 
             <p className="mt-2 text-xs text-muted-foreground">
-              Select up to {maxRentalDays} rental days.
+              Pickup starts tomorrow (Beirut time). Select up to{" "}
+              {maxRentalDays} rental days.
             </p>
           </div>
         </PopoverContent>
