@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Clock, Fuel, Gauge, Users } from "lucide-react";
 
 type CarSummaryCardProps = {
@@ -25,10 +24,10 @@ export function CarSummaryCard({
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="relative w-full md:w-56 h-36 rounded-lg overflow-hidden bg-muted shrink-0">
           {imageSrc ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={imageSrc}
               alt={name}
-              fill
               sizes="(max-width: 768px) 100vw, 224px"
               className="object-cover"
             />

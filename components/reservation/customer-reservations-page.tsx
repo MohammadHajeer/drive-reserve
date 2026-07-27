@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -82,79 +81,58 @@ export function CustomerReservationsPage() {
   const reservationsQuery = useCustomerReservations();
 
   const [search, setSearch] = useState("");
-  const [status, setStatus] =
-    useState<StatusFilter>(initialStatus);
-  const [view, setView] =
-    useState<ReservationsView>("table");
+  const [status, setStatus] = useState<StatusFilter>(initialStatus);
+  const [view, setView] = useState<ReservationsView>("table");
   const [page, setPage] = useState(1);
 
   const filteredReservations = useMemo(() => {
-    const normalizedSearch = search
-      .trim()
-      .toLowerCase();
+    const normalizedSearch = search.trim().toLowerCase();
 
-    return (reservationsQuery.data ?? []).filter(
-      (reservation) => {
-        const matchesStatus =
-          status === "all" ||
-          reservation.status === status;
+    return (reservationsQuery.data ?? []).filter((reservation) => {
+      const matchesStatus = status === "all" || reservation.status === status;
 
-        const matchesSearch =
-          normalizedSearch.length === 0 ||
-          reservation.id
-            .toLowerCase()
-            .includes(normalizedSearch) ||
-          reservation.car.name
-            .toLowerCase()
-            .includes(normalizedSearch) ||
-          reservation.car.category
-            ?.toLowerCase()
-            .includes(normalizedSearch);
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        reservation.id.toLowerCase().includes(normalizedSearch) ||
+        reservation.car.name.toLowerCase().includes(normalizedSearch) ||
+        reservation.car.category?.toLowerCase().includes(normalizedSearch);
 
-        return matchesStatus && matchesSearch;
-      },
-    );
+      return matchesStatus && matchesSearch;
+    });
   }, [reservationsQuery.data, search, status]);
 
   const pageCount = Math.max(
     1,
-    Math.ceil(
-      filteredReservations.length / pageSize,
-    ),
+    Math.ceil(filteredReservations.length / pageSize),
   );
 
   const safePage = Math.min(page, pageCount);
 
-  const visibleReservations =
-    filteredReservations.slice(
-      (safePage - 1) * pageSize,
-      safePage * pageSize,
-    );
+  const visibleReservations = filteredReservations.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize,
+  );
 
   function updateSearch(value: string) {
     setSearch(value);
     setPage(1);
   }
 
-  function updateStatus(
-    value: StatusFilter | null,
-  ) {
+  function updateStatus(value: StatusFilter | null) {
     setStatus(value ?? "all");
     setPage(1);
   }
 
   function exportHistory() {
-    const rows = filteredReservations.map(
-      (reservation) => [
-        reservation.id,
-        reservation.car.name,
-        reservation.pickupDate,
-        reservation.returnDate,
-        String(reservation.rentalDays),
-        String(reservation.totalPrice),
-        reservation.status,
-      ],
-    );
+    const rows = filteredReservations.map((reservation) => [
+      reservation.id,
+      reservation.car.name,
+      reservation.pickupDate,
+      reservation.returnDate,
+      String(reservation.rentalDays),
+      String(reservation.totalPrice),
+      reservation.status,
+    ]);
 
     const csv = [
       [
@@ -168,9 +146,7 @@ export function CustomerReservationsPage() {
       ],
       ...rows,
     ]
-      .map((row) =>
-        row.map(toCsvCell).join(","),
-      )
+      .map((row) => row.map(toCsvCell).join(","))
       .join("\n");
 
     const url = URL.createObjectURL(
@@ -179,12 +155,10 @@ export function CustomerReservationsPage() {
       }),
     );
 
-    const anchor =
-      document.createElement("a");
+    const anchor = document.createElement("a");
 
     anchor.href = url;
-    anchor.download =
-      "drivereserve-reservations.csv";
+    anchor.download = "drivereserve-reservations.csv";
     anchor.click();
 
     URL.revokeObjectURL(url);
@@ -194,13 +168,10 @@ export function CustomerReservationsPage() {
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            My Reservations
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">My Reservations</h1>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Track current bookings and review your
-            rental history.
+            Track current bookings and review your rental history.
           </p>
         </div>
 
@@ -208,9 +179,7 @@ export function CustomerReservationsPage() {
           <Button
             type="button"
             variant="outline"
-            disabled={
-              !filteredReservations.length
-            }
+            disabled={!filteredReservations.length}
             onClick={exportHistory}
           >
             <Download aria-hidden="true" />
@@ -219,10 +188,7 @@ export function CustomerReservationsPage() {
 
           <Link
             href={APP_ROUTES.cars}
-            className={cn(
-              buttonVariants(),
-              "rounded-4xl",
-            )}
+            className={cn(buttonVariants(), "rounded-4xl")}
           >
             <Plus aria-hidden="true" />
             Book a car
@@ -237,35 +203,23 @@ export function CustomerReservationsPage() {
 
             <Input
               value={search}
-              onChange={(event) =>
-                updateSearch(event.target.value)
-              }
+              onChange={(event) => updateSearch(event.target.value)}
               placeholder="Search by reservation ID or vehicle"
               className="pl-9"
             />
           </div>
 
-          <Select
-            value={status}
-            onValueChange={updateStatus}
-          >
+          <Select value={status} onValueChange={updateStatus}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue>
-                {status === "all"
-                  ? "All statuses"
-                  : capitalize(status)}
+                {status === "all" ? "All statuses" : capitalize(status)}
               </SelectValue>
             </SelectTrigger>
 
             <SelectContent>
               {statusOptions.map((option) => (
-                <SelectItem
-                  key={option}
-                  value={option}
-                >
-                  {option === "all"
-                    ? "All statuses"
-                    : capitalize(option)}
+                <SelectItem key={option} value={option}>
+                  {option === "all" ? "All statuses" : capitalize(option)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -276,24 +230,14 @@ export function CustomerReservationsPage() {
       {reservationsQuery.isPending ? (
         <ReservationsSkeleton view={view} />
       ) : reservationsQuery.isError ? (
-        <ReservationsError
-          onRetry={() =>
-            void reservationsQuery.refetch()
-          }
-        />
+        <ReservationsError onRetry={() => void reservationsQuery.refetch()} />
       ) : visibleReservations.length === 0 ? (
-        <ReservationsEmpty
-          filtered={Boolean(
-            search || status !== "all",
-          )}
-        />
+        <ReservationsEmpty filtered={Boolean(search || status !== "all")} />
       ) : (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-semibold">
-                Reservation history
-              </h2>
+              <h2 className="font-semibold">Reservation history</h2>
 
               <p className="text-sm text-muted-foreground">
                 {filteredReservations.length}{" "}
@@ -312,11 +256,7 @@ export function CustomerReservationsPage() {
               <Button
                 type="button"
                 size="sm"
-                variant={
-                  view === "table"
-                    ? "default"
-                    : "ghost"
-                }
+                variant={view === "table" ? "default" : "ghost"}
                 aria-pressed={view === "table"}
                 onClick={() => setView("table")}
                 className="h-8 gap-2 px-3"
@@ -328,11 +268,7 @@ export function CustomerReservationsPage() {
               <Button
                 type="button"
                 size="sm"
-                variant={
-                  view === "cards"
-                    ? "default"
-                    : "ghost"
-                }
+                variant={view === "cards" ? "default" : "ghost"}
                 aria-pressed={view === "cards"}
                 onClick={() => setView("cards")}
                 className="h-8 gap-2 px-3"
@@ -344,37 +280,24 @@ export function CustomerReservationsPage() {
           </div>
 
           {view === "table" ? (
-            <ReservationsTable
-              reservations={visibleReservations}
-            />
+            <ReservationsTable reservations={visibleReservations} />
           ) : (
             <div className="space-y-3">
-              {visibleReservations.map(
-                (reservation) => (
-                  <ReservationCard
-                    key={reservation.id}
-                    reservation={reservation}
-                  />
-                ),
-              )}
+              {visibleReservations.map((reservation) => (
+                <ReservationCard
+                  key={reservation.id}
+                  reservation={reservation}
+                />
+              ))}
             </div>
           )}
 
           <ReservationsPagination
             page={safePage}
             pageCount={pageCount}
-            onPrevious={() =>
-              setPage((current) =>
-                Math.max(1, current - 1),
-              )
-            }
+            onPrevious={() => setPage((current) => Math.max(1, current - 1))}
             onNext={() =>
-              setPage((current) =>
-                Math.min(
-                  pageCount,
-                  current + 1,
-                ),
-              )
+              setPage((current) => Math.min(pageCount, current + 1))
             }
           />
         </div>
@@ -398,9 +321,7 @@ function ReservationsTable({
                 Vehicle
               </TableHead>
 
-              <TableHead className="h-auto px-5 py-4">
-                Reservation
-              </TableHead>
+              <TableHead className="h-auto px-5 py-4">Reservation</TableHead>
 
               <TableHead className="h-auto min-w-64 px-5 py-4">
                 Rental period
@@ -414,14 +335,10 @@ function ReservationsTable({
                 Total
               </TableHead>
 
-              <TableHead className="h-auto px-5 py-4">
-                Status
-              </TableHead>
+              <TableHead className="h-auto px-5 py-4">Status</TableHead>
 
               <TableHead className="h-auto w-16 px-5 py-4 text-right">
-                <span className="sr-only">
-                  Actions
-                </span>
+                <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -430,16 +347,10 @@ function ReservationsTable({
             {reservations.map((reservation) => {
               const reservationHref = `/my-reservations/${reservation.id}`;
 
-              const reservationCode =
-                reservation.id
-                  .slice(0, 8)
-                  .toUpperCase();
+              const reservationCode = reservation.id.slice(0, 8).toUpperCase();
 
               return (
-                <TableRow
-                  key={reservation.id}
-                  className="group"
-                >
+                <TableRow key={reservation.id} className="group">
                   <TableCell className="px-5 py-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <Link
@@ -447,15 +358,10 @@ function ReservationsTable({
                         className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted"
                       >
                         {reservation.car.imageUrl ? (
-                          <Image
-                            src={
-                              reservation.car
-                                .imageUrl
-                            }
-                            alt={
-                              reservation.car.name
-                            }
-                            fill
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={reservation.car.imageUrl}
+                            alt={reservation.car.name}
                             sizes="80px"
                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
@@ -479,10 +385,7 @@ function ReservationsTable({
 
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
                           {reservation.car.category
-                            ? capitalize(
-                                reservation.car
-                                  .category,
-                              )
+                            ? capitalize(reservation.car.category)
                             : "Rental vehicle"}
                         </p>
                       </div>
@@ -506,15 +409,9 @@ function ReservationsTable({
                       />
 
                       <span className="text-sm text-muted-foreground">
-                        {formatDate(
-                          reservation.pickupDate,
-                        )}
-                        <span className="mx-1.5">
-                          –
-                        </span>
-                        {formatDate(
-                          reservation.returnDate,
-                        )}
+                        {formatDate(reservation.pickupDate)}
+                        <span className="mx-1.5">–</span>
+                        {formatDate(reservation.returnDate)}
                       </span>
                     </div>
                   </TableCell>
@@ -524,15 +421,11 @@ function ReservationsTable({
                   </TableCell>
 
                   <TableCell className="whitespace-nowrap px-5 py-3 text-right font-semibold tabular-nums">
-                    {priceFormatter.format(
-                      reservation.totalPrice,
-                    )}
+                    {priceFormatter.format(reservation.totalPrice)}
                   </TableCell>
 
                   <TableCell className="px-5 py-3">
-                    <ReservationStatusBadge
-                      status={reservation.status}
-                    />
+                    <ReservationStatusBadge status={reservation.status} />
                   </TableCell>
 
                   <TableCell className="px-5 py-3 text-right">
@@ -567,16 +460,10 @@ function ReservationCard({
 }) {
   const reservationHref = `/my-reservations/${reservation.id}`;
 
-  const reservationCode = reservation.id
-    .slice(0, 8)
-    .toUpperCase();
+  const reservationCode = reservation.id.slice(0, 8).toUpperCase();
 
-  const rentalDaysLabel = `${
-    reservation.rentalDays
-  } ${
-    reservation.rentalDays === 1
-      ? "day"
-      : "days"
+  const rentalDaysLabel = `${reservation.rentalDays} ${
+    reservation.rentalDays === 1 ? "day" : "days"
   }`;
 
   return (
@@ -592,10 +479,10 @@ function ReservationCard({
         <CardContent className="grid gap-4 p-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-center sm:p-4">
           <div className="relative aspect-video overflow-hidden rounded-xl border bg-muted sm:h-24 sm:w-36 sm:aspect-auto">
             {reservation.car.imageUrl ? (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={reservation.car.imageUrl}
                 alt={reservation.car.name}
-                fill
                 sizes="(max-width: 639px) calc(100vw - 3rem), 144px"
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
@@ -606,9 +493,7 @@ function ReservationCard({
                   aria-hidden="true"
                 />
 
-                <span className="sr-only">
-                  No vehicle image available
-                </span>
+                <span className="sr-only">No vehicle image available</span>
               </div>
             )}
           </div>
@@ -619,25 +504,19 @@ function ReservationCard({
                 {reservation.car.name}
               </h2>
 
-              <ReservationStatusBadge
-                status={reservation.status}
-              />
+              <ReservationStatusBadge status={reservation.status} />
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span>
                 {reservation.car.category
-                  ? capitalize(
-                      reservation.car.category,
-                    )
+                  ? capitalize(reservation.car.category)
                   : "Rental vehicle"}
               </span>
 
               <span aria-hidden="true">•</span>
 
-              <span className="font-mono">
-                #{reservationCode}
-              </span>
+              <span className="font-mono">#{reservationCode}</span>
             </div>
 
             <div className="mt-3 flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2">
@@ -648,17 +527,11 @@ function ReservationCard({
 
               <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">
-                  {formatDate(
-                    reservation.pickupDate,
-                  )}
+                  {formatDate(reservation.pickupDate)}
 
-                  <span className="mx-1.5 text-muted-foreground">
-                    –
-                  </span>
+                  <span className="mx-1.5 text-muted-foreground">–</span>
 
-                  {formatDate(
-                    reservation.returnDate,
-                  )}
+                  {formatDate(reservation.returnDate)}
                 </p>
 
                 <p className="mt-0.5 text-xs text-muted-foreground">
@@ -675,15 +548,12 @@ function ReservationCard({
               </p>
 
               <p className="mt-0.5 text-xl font-bold tabular-nums text-foreground">
-                {priceFormatter.format(
-                  reservation.totalPrice,
-                )}
+                {priceFormatter.format(reservation.totalPrice)}
               </p>
             </div>
 
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
               View details
-
               <ArrowUpRight
                 className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                 aria-hidden="true"
@@ -740,11 +610,7 @@ function ReservationsPagination({
   );
 }
 
-function ReservationsSkeleton({
-  view,
-}: {
-  view: ReservationsView;
-}) {
+function ReservationsSkeleton({ view }: { view: ReservationsView }) {
   if (view === "table") {
     return (
       <div
@@ -754,35 +620,22 @@ function ReservationsSkeleton({
         <Skeleton className="h-12 rounded-none" />
 
         {[0, 1, 2, 3].map((item) => (
-          <Skeleton
-            key={item}
-            className="mt-px h-20 rounded-none"
-          />
+          <Skeleton key={item} className="mt-px h-20 rounded-none" />
         ))}
       </div>
     );
   }
 
   return (
-    <div
-      className="space-y-3"
-      aria-label="Loading reservations"
-    >
+    <div className="space-y-3" aria-label="Loading reservations">
       {[0, 1, 2].map((item) => (
-        <Skeleton
-          key={item}
-          className="h-32"
-        />
+        <Skeleton key={item} className="h-32" />
       ))}
     </div>
   );
 }
 
-function ReservationsError({
-  onRetry,
-}: {
-  onRetry: () => void;
-}) {
+function ReservationsError({ onRetry }: { onRetry: () => void }) {
   return (
     <Card className="border-destructive/20">
       <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -791,8 +644,7 @@ function ReservationsError({
 
           <div>
             <p className="font-medium">
-              We couldn&apos;t load your
-              reservations.
+              We couldn&apos;t load your reservations.
             </p>
 
             <p className="text-sm text-muted-foreground">
@@ -801,11 +653,7 @@ function ReservationsError({
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onRetry}
-        >
+        <Button type="button" variant="outline" onClick={onRetry}>
           Try again
         </Button>
       </CardContent>
@@ -813,25 +661,16 @@ function ReservationsError({
   );
 }
 
-function ReservationsEmpty({
-  filtered,
-}: {
-  filtered: boolean;
-}) {
+function ReservationsEmpty({ filtered }: { filtered: boolean }) {
   return (
     <Card>
       <CardContent className="flex min-h-64 flex-col items-center justify-center text-center">
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <CarFront
-            className="size-6"
-            aria-hidden="true"
-          />
+          <CarFront className="size-6" aria-hidden="true" />
         </span>
 
         <h2 className="mt-4 font-semibold">
-          {filtered
-            ? "No matching reservations"
-            : "No reservations yet"}
+          {filtered ? "No matching reservations" : "No reservations yet"}
         </h2>
 
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">
@@ -843,10 +682,7 @@ function ReservationsEmpty({
         {!filtered && (
           <Link
             href={APP_ROUTES.cars}
-            className={cn(
-              buttonVariants(),
-              "mt-5 rounded-4xl",
-            )}
+            className={cn(buttonVariants(), "mt-5 rounded-4xl")}
           >
             Browse cars
           </Link>
@@ -859,25 +695,17 @@ function ReservationsEmpty({
 function formatDate(value: string) {
   const parsedDate = parseDateOnly(value);
 
-  return parsedDate
-    ? dateFormatter.format(parsedDate)
-    : value;
+  return parsedDate ? dateFormatter.format(parsedDate) : value;
 }
 
 function capitalize(value: string) {
-  return `${value
-    .charAt(0)
-    .toUpperCase()}${value.slice(1)}`;
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
 function toCsvCell(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-function isStatusFilter(
-  value: string | null,
-): value is StatusFilter {
-  return statusOptions.some(
-    (option) => option === value,
-  );
+function isStatusFilter(value: string | null): value is StatusFilter {
+  return statusOptions.some((option) => option === value);
 }
