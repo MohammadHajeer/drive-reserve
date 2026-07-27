@@ -1,7 +1,12 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, TrendingUp } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Minus,
+  TrendingUp,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +17,7 @@ type DashboardKpiCardProps = {
   description: string;
   href: string;
   icon: LucideIcon;
-  trend?: string;
+  trend?: number | null;
 };
 
 export function DashboardKpiCard({
@@ -24,6 +29,18 @@ export function DashboardKpiCard({
   trend,
 }: DashboardKpiCardProps) {
   const router = useRouter();
+  const TrendIcon = trend === null || trend === 0
+    ? Minus
+    : trend !== undefined && trend < 0
+      ? ArrowDownRight
+      : TrendingUp;
+  const trendLabel = trend === null
+    ? "No previous data"
+    : trend === 0
+      ? "No change"
+      : trend !== undefined
+        ? `${trend > 0 ? "+" : ""}${trend}%`
+        : null;
 
   return (
     <Card
@@ -48,20 +65,23 @@ export function DashboardKpiCard({
         </div>
 
         <div className="mt-5">
-          <p className="text-sm font-medium text-muted-foreground">
-            {title}
-          </p>
-
-          <p className="mt-1 text-3xl font-bold tracking-tight">
-            {value}
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="mt-1 text-3xl font-bold tracking-tight">{value}</p>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          {trend ? (
-            <span className="flex items-center gap-1 font-medium text-emerald-600">
-              <TrendingUp className="size-3.5" />
-              {trend}
+          {trendLabel ? (
+            <span
+              className={
+                trend !== null && trend !== undefined && trend > 0
+                  ? "flex items-center gap-1 font-medium text-emerald-600"
+                  : trend !== null && trend !== undefined && trend < 0
+                    ? "flex items-center gap-1 font-medium text-rose-600"
+                    : "flex items-center gap-1 font-medium text-muted-foreground"
+              }
+            >
+              <TrendIcon className="size-3.5" />
+              {trendLabel}
             </span>
           ) : null}
 

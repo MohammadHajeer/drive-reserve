@@ -4,13 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BarChart3,
   CalendarDays,
   CarFront,
   LayoutDashboard,
   Loader2,
   LogOut,
-  Settings,
   Users,
   X,
 } from "lucide-react";
@@ -41,16 +39,6 @@ const navigation = [
     href: "/admin/customers",
     icon: Users,
   },
-  {
-    label: "Reports",
-    href: "/admin/reports",
-    icon: BarChart3,
-  },
-  {
-    label: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
 ] as const;
 
 type AdminSidebarProps = {
@@ -66,10 +54,7 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminSidebar({
-  open,
-  onClose,
-}: AdminSidebarProps) {
+export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -135,9 +120,7 @@ export function AdminSidebar({
                 DriveReserve
               </p>
 
-              <p className="mt-1 text-xs text-slate-400">
-                Admin Portal
-              </p>
+              <p className="mt-1 text-xs text-slate-400">Admin Portal</p>
             </div>
           </Link>
 

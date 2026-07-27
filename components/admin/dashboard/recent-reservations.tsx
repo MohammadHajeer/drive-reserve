@@ -1,7 +1,10 @@
 "use client";
 
-import { Eye } from "lucide-react";
+import { CalendarX2, Eye } from "lucide-react";
+import Link from "next/link";
 
+import { ReservationStatusBadge } from "@/components/admin/reservations/reservation-status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,94 +12,78 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { RecentDashboardReservation } from "@/features/admin/dashboard/admin-dashboard.types";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
-import type {
-  RecentDashboardReservation,
-} from "@/features/admin/dashboard/admin-dashboard.types";
-
-type Props = {
-  reservations: RecentDashboardReservation[];
-};
-
-const statusVariant: Record<
-  RecentDashboardReservation["status"],
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  approved: "default",
-  pending: "secondary",
-  completed: "outline",
-  cancelled: "destructive",
-  rejected: "destructive",
-};
+import {
+  formatCurrency,
+  formatDateOnly,
+  formatReservationReference,
+} from "./dashboard-formatters";
 
 export function RecentReservations({
   reservations,
-}: Props) {
+}: {
+  reservations: RecentDashboardReservation[];
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Reservations</CardTitle>
-
-        <CardDescription>
-          Latest reservation activity.
-        </CardDescription>
+        <CardTitle>Recent reservations</CardTitle>
+        <CardDescription>Latest reservation activity.</CardDescription>
       </CardHeader>
 
       <CardContent className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left">
-              <th className="py-3">Reference</th>
-              <th>Customer</th>
-              <th>Car</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th></th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {reservations.map((reservation) => (
-              <tr
-                key={reservation.id}
-                className="border-b last:border-0"
-              >
-                <td className="py-4 font-medium">
-                  {reservation.reference}
-                </td>
-
-                <td>{reservation.customerName}</td>
-
-                <td>{reservation.carName}</td>
-
-                <td>
-                  <Badge variant={statusVariant[reservation.status]}>
-                    {reservation.status}
-                  </Badge>
-                </td>
-
-                <td>
-                  {reservation.totalAmount.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  })}
-                </td>
-
-                <td className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                  >
-                    <Eye className="size-4" />
-                  </Button>
-                </td>
+        {reservations.length > 0 ? (
+          <table className="w-full min-w-[760px] text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="py-3">Reference</th>
+                <th>Customer</th>
+                <th>Car</th>
+                <th>Rental dates</th>
+                <th>Status</th>
+                <th className="text-right">Total</th>
+                <th><span className="sr-only">Actions</span></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {reservations.map((reservation) => (
+                <tr key={reservation.id} className="border-b last:border-0">
+                  <td className="py-4 font-medium">
+                    {formatReservationReference(reservation.id)}
+                  </td>
+                  <td>{reservation.customerName}</td>
+                  <td>{reservation.carName}</td>
+                  <td className="whitespace-nowrap text-muted-foreground">
+                    {formatDateOnly(reservation.pickupDate)} – {formatDateOnly(reservation.returnDate)}
+                  </td>
+                  <td><ReservationStatusBadge status={reservation.status} /></td>
+                  <td className="text-right font-medium tabular-nums">
+                    {formatCurrency(reservation.totalAmount)}
+                  </td>
+                  <td className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`View reservation ${formatReservationReference(reservation.id)}`}
+                      render={<Link href={`/admin/reservations/${reservation.id}`} />}
+                    >
+                      <Eye className="size-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="flex min-h-60 flex-col items-center justify-center rounded-lg border border-dashed text-center">
+            <CalendarX2 className="size-9 text-muted-foreground" />
+            <p className="mt-3 font-medium">No reservations yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              New reservations will appear here.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
