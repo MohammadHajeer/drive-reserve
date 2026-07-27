@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircle, Search, X } from "lucide-react";
+import { ListFilter, LoaderCircle, RotateCcw, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -37,7 +39,10 @@ type ReservationsFiltersProps = {
   onReset: () => void;
 };
 
-const statusOptions: { label: string; value: ReservationsFilterState["status"] }[] = [
+const STATUS_OPTIONS: Array<{
+  label: string;
+  value: ReservationsFilterState["status"];
+}> = [
   { label: "All statuses", value: "all" },
   { label: "Pending", value: "pending" },
   { label: "Confirmed", value: "confirmed" },
@@ -47,7 +52,10 @@ const statusOptions: { label: string; value: ReservationsFilterState["status"] }
   { label: "Rejected", value: "rejected" },
 ];
 
-const sortOptions: { label: string; value: AdminReservationsSort }[] = [
+const SORT_OPTIONS: Array<{
+  label: string;
+  value: AdminReservationsSort;
+}> = [
   { label: "Newest first", value: "newest" },
   { label: "Oldest first", value: "oldest" },
   { label: "Pickup: earliest", value: "pickup-asc" },
@@ -55,6 +63,11 @@ const sortOptions: { label: string; value: AdminReservationsSort }[] = [
   { label: "Total: low to high", value: "total-asc" },
   { label: "Total: high to low", value: "total-desc" },
 ];
+
+const PAGE_SIZE_OPTIONS = ADMIN_RESERVATIONS_PAGE_SIZES.map((size) => ({
+  label: `${size} per page`,
+  value: String(size),
+}));
 
 function normalizeSearch(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -68,123 +81,223 @@ export function ReservationsFilters({
 }: ReservationsFiltersProps) {
   const [searchInput, setSearchInput] = useState(value.q);
 
+  // Synchronize the local input when filters are reset or changed externally.
+  useEffect(() => {
+    requestAnimationFrame(() => setSearchInput(value.q));
+  }, [value.q]);
+
   useEffect(() => {
     const normalizedInput = normalizeSearch(searchInput);
-    if (normalizedInput === normalizeSearch(value.q)) return;
+
+    if (normalizedInput === normalizeSearch(value.q)) {
+      return;
+    }
 
     const timeout = window.setTimeout(() => {
       onChange("q", normalizedInput);
     }, 400);
+
     return () => window.clearTimeout(timeout);
   }, [onChange, searchInput, value.q]);
 
+  function handleReset() {
+    setSearchInput("");
+    onReset();
+  }
+
   return (
-    <fieldset
+    <Card
       aria-busy={pending}
-      className="rounded-2xl border bg-card p-4 shadow-sm"
+      className="overflow-hidden border-border/70 shadow-sm"
     >
-      <legend className="sr-only">Reservation filters</legend>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-medium">Filters</p>
-        {pending && (
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <LoaderCircle className="size-3.5 animate-spin" /> Updating
-          </span>
-        )}
-      </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <label className="relative md:col-span-2">
-          <span className="sr-only">Search reservations</span>
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            maxLength={100}
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Reservation ID, customer, car, or plate..."
-            className="h-11 rounded-xl pl-10"
-          />
-        </label>
+      <div className="flex flex-col gap-3 border-b bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ListFilter className="size-4" />
+          </div>
 
-        <FilterSelect
-          ariaLabel="Filter reservations by status"
-          value={value.status}
-          items={statusOptions}
-          onChange={(status) => onChange("status", status)}
-        />
-        <FilterSelect
-          ariaLabel="Sort reservations"
-          value={value.sort}
-          items={sortOptions}
-          onChange={(sort) => onChange("sort", sort)}
-        />
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">
+              Filter reservations
+            </h2>
 
-        <Input
-          type="date"
-          aria-label="Pickup date from"
-          value={value.pickupFrom}
-          onChange={(event) => onChange("pickupFrom", event.target.value)}
-          className="h-11 rounded-xl"
-        />
-        <Input
-          type="date"
-          aria-label="Pickup date to"
-          min={value.pickupFrom || undefined}
-          value={value.pickupTo}
-          onChange={(event) => onChange("pickupTo", event.target.value)}
-          className="h-11 rounded-xl"
-        />
-        <FilterSelect
-          ariaLabel="Reservations per page"
-          value={String(value.limit)}
-          items={ADMIN_RESERVATIONS_PAGE_SIZES.map((size) => ({
-            label: `${size} per page`,
-            value: String(size),
-          }))}
-          onChange={(limit) => onChange("limit", Number(limit))}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 rounded-xl"
-          onClick={onReset}
-        >
-          <X className="size-4" /> Reset
-        </Button>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Search and refine the reservation list.
+            </p>
+          </div>
+        </div>
+
+        <div role="status" aria-live="polite" className="min-h-7">
+          {pending && (
+            <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-xs">
+              <LoaderCircle className="size-3.5 animate-spin" />
+              Updating results
+            </span>
+          )}
+        </div>
       </div>
-    </fieldset>
+
+      <CardContent className="p-5">
+        <fieldset>
+          <legend className="sr-only">Reservation filters</legend>
+
+          <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-12">
+            <div className="space-y-2 md:col-span-2 xl:col-span-6">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="reservations-search">Search reservations</Label>
+
+                <span className="text-xs text-muted-foreground">
+                  Customer, vehicle, plate, or ID
+                </span>
+              </div>
+
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="reservations-search"
+                  type="search"
+                  maxLength={100}
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setSearchInput("");
+                    }
+                  }}
+                  placeholder="Search reservations..."
+                  className="pl-9 pr-10 [&::-webkit-search-cancel-button]:appearance-none"
+                />
+
+                {searchInput.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Clear reservation search"
+                    onClick={() => setSearchInput("")}
+                    className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <FilterSelect
+              id="reservations-status"
+              label="Status"
+              value={value.status}
+              items={STATUS_OPTIONS}
+              onChange={(status) => onChange("status", status)}
+              className="xl:col-span-3"
+            />
+
+            <FilterSelect
+              id="reservations-sort"
+              label="Sort by"
+              value={value.sort}
+              items={SORT_OPTIONS}
+              onChange={(sort) => onChange("sort", sort)}
+              className="xl:col-span-3"
+            />
+
+            <div className="space-y-2 xl:col-span-3">
+              <Label htmlFor="reservations-pickup-from">Pickup from</Label>
+
+              <Input
+                id="reservations-pickup-from"
+                type="date"
+                max={value.pickupTo || undefined}
+                value={value.pickupFrom}
+                onChange={(event) => onChange("pickupFrom", event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2 xl:col-span-3">
+              <Label htmlFor="reservations-pickup-to">Pickup to</Label>
+
+              <Input
+                id="reservations-pickup-to"
+                type="date"
+                min={value.pickupFrom || undefined}
+                value={value.pickupTo}
+                onChange={(event) => onChange("pickupTo", event.target.value)}
+              />
+            </div>
+
+            <FilterSelect
+              id="reservations-page-size"
+              label="Results per page"
+              value={String(value.limit)}
+              items={PAGE_SIZE_OPTIONS}
+              onChange={(limit) => onChange("limit", Number(limit))}
+              className="xl:col-span-3"
+            />
+
+            <div className="flex items-end xl:col-span-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                className="w-full gap-2"
+              >
+                <RotateCcw className="size-4" />
+                Reset filters
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </CardContent>
+    </Card>
   );
 }
 
+type FilterSelectProps<TValue extends string> = {
+  id: string;
+  label: string;
+  value: TValue;
+  items: Array<{
+    label: string;
+    value: TValue;
+  }>;
+  onChange: (value: TValue) => void;
+  className?: string;
+};
+
 function FilterSelect<TValue extends string>({
-  ariaLabel,
+  id,
+  label,
   value,
   items,
   onChange,
-}: {
-  ariaLabel: string;
-  value: TValue;
-  items: { label: string; value: TValue }[];
-  onChange: (value: TValue) => void;
-}) {
+  className,
+}: FilterSelectProps<TValue>) {
   return (
-    <Select<TValue>
-      items={items}
-      value={value}
-      onValueChange={(nextValue) => {
-        if (nextValue !== null) onChange(nextValue);
-      }}
-    >
-      <SelectTrigger aria-label={ariaLabel} className="h-11 w-full rounded-xl">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="start" alignItemWithTrigger={false}>
-        {items.map((item) => (
-          <SelectItem key={item.value} value={item.value}>
-            {item.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className={`space-y-2 ${className ?? ""}`}>
+      <Label htmlFor={id}>{label}</Label>
+
+      <Select<TValue>
+        items={items}
+        value={value}
+        onValueChange={(nextValue) => {
+          if (nextValue !== null) {
+            onChange(nextValue);
+          }
+        }}
+      >
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+
+        <SelectContent align="start" alignItemWithTrigger={false}>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

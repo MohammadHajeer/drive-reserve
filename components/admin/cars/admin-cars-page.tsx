@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Download, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import { Button, buttonVariants } from "@/components/ui/button";
 import type {
   AdminCar,
@@ -21,6 +22,7 @@ import {
   type CarStatus,
   type Transmission,
 } from "@/types/domain";
+
 import { prepareAdminCarListItems } from "./admin-car-list-item";
 import { CarsFilters, type CarsFilterState } from "./cars-filters";
 import { CarsMobileList } from "./cars-mobile-list";
@@ -32,6 +34,8 @@ import {
   CarsNoResultsState,
 } from "./cars-states";
 import { CarsTable } from "./cars-table";
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 const adminCarsSorts: readonly AdminCarsSort[] = [
   "newest",
@@ -58,16 +62,27 @@ function isAdminCarsSort(value: string | null): value is AdminCarsSort {
 }
 
 function parsePage(value: string | null) {
-  if (value === null) return 1;
+  if (value === null) {
+    return 1;
+  }
 
   const page = Number(value);
+
   return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().replace(/\s+/g, " ");
 }
 
 export function AdminCarsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
   const [busyCarId, setBusyCarId] = useState<string>();
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get("search") ?? "",
+  );
 
   const { filters, page } = useMemo(() => {
     const status = searchParams.get("status");
@@ -83,9 +98,56 @@ export function AdminCarsPage() {
         transmission: isTransmission(transmission) ? transmission : "all",
         sort: isAdminCarsSort(sort) ? sort : "newest",
       } satisfies CarsFilterState,
+
       page: parsePage(searchParams.get("page")),
     };
   }, [searchParams]);
+
+  const replaceSearchParams = useCallback(
+    (nextParams: URLSearchParams) => {
+      const queryString = nextParams.toString();
+
+      window.history.replaceState(
+        null,
+        "",
+        queryString ? `${pathname}?${queryString}` : pathname,
+      );
+    },
+    [pathname],
+  );
+
+  // Keep the input synchronized with URL changes such as reset,
+  // browser navigation, or an external filter update.
+  useEffect(() => {
+    requestAnimationFrame(() => setSearchInput(filters.search));
+  }, [filters.search]);
+
+  // Update the URL and fetch results only after the user pauses typing.
+  useEffect(() => {
+    const normalizedInput = normalizeSearch(searchInput);
+    const normalizedUrlSearch = normalizeSearch(filters.search);
+
+    if (normalizedInput === normalizedUrlSearch) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+
+      if (normalizedInput) {
+        nextParams.set("search", normalizedInput);
+      } else {
+        nextParams.delete("search");
+      }
+
+      nextParams.set("page", "1");
+      replaceSearchParams(nextParams);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [filters.search, replaceSearchParams, searchInput, searchParams]);
 
   const carsQuery = useMemo<AdminCarsQuery>(
     () => ({
@@ -106,6 +168,7 @@ export function AdminCarsPage() {
   const updateMutation = useUpdateCar();
 
   const cars = useMemo(() => query.data?.cars ?? [], [query.data?.cars]);
+
   const listItems = useMemo(() => prepareAdminCarListItems(cars), [cars]);
 
   const categories = useMemo(() => {
@@ -121,26 +184,20 @@ export function AdminCarsPage() {
   }, [cars, filters.category]);
 
   const hasActiveFilters =
-    filters.search.trim() !== "" ||
+    searchInput.trim() !== "" ||
     filters.status !== "all" ||
     filters.category !== "all" ||
-    filters.transmission !== "all";
-
-  function replaceSearchParams(nextParams: URLSearchParams) {
-    const queryString = nextParams.toString();
-    window.history.replaceState(
-      null,
-      "",
-      queryString ? `${pathname}?${queryString}` : pathname,
-    );
-  }
+    filters.transmission !== "all" ||
+    filters.sort !== "newest";
 
   function changeFilter<TName extends keyof CarsFilterState>(
     name: TName,
     value: CarsFilterState[TName],
   ) {
     const nextParams = new URLSearchParams(searchParams.toString());
+
     const stringValue = String(value);
+
     const isDefaultValue =
       stringValue === "" ||
       stringValue === "all" ||
@@ -156,7 +213,22 @@ export function AdminCarsPage() {
     replaceSearchParams(nextParams);
   }
 
+  function handleFilterChange<TName extends keyof CarsFilterState>(
+    name: TName,
+    value: CarsFilterState[TName],
+  ) {
+    if (name === "search") {
+      setSearchInput(String(value));
+      return;
+    }
+
+    changeFilter(name, value);
+  }
+
   function resetFilters() {
+    // Clear the visible search input immediately.
+    setSearchInput("");
+
     const nextParams = new URLSearchParams(searchParams.toString());
 
     for (const name of [
@@ -175,7 +247,9 @@ export function AdminCarsPage() {
 
   function changePage(nextPage: number) {
     const nextParams = new URLSearchParams(searchParams.toString());
+
     nextParams.set("page", String(Math.max(1, nextPage)));
+
     replaceSearchParams(nextParams);
   }
 
@@ -210,8 +284,11 @@ export function AdminCarsPage() {
     try {
       await updateMutation.mutateAsync({
         carId: car.id,
-        input: { status: "available" },
+        input: {
+          status: "available",
+        },
       });
+
       toast.success("Car restored successfully.");
     } catch (error) {
       toast.error(
@@ -223,8 +300,11 @@ export function AdminCarsPage() {
   }
 
   const total = query.data?.pagination.total ?? 0;
+
   const available = cars.filter((car) => car.status === "available").length;
+
   const maintenance = cars.filter((car) => car.status === "maintenance").length;
+
   const inactive = cars.filter((car) => car.status === "inactive").length;
 
   return (
@@ -234,14 +314,17 @@ export function AdminCarsPage() {
           <p className="text-sm font-semibold text-blue-600">
             Fleet operations
           </p>
+
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
             Car Management
           </h1>
+
           <p className="mt-2 max-w-2xl text-slate-500">
             Search, review, update, and safely deactivate every vehicle in the
             fleet.
           </p>
         </div>
+
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -249,32 +332,50 @@ export function AdminCarsPage() {
             size="lg"
             className="h-11 rounded-xl bg-white font-semibold"
           >
-            <Download className="size-4" /> Export CSV
+            <Download className="size-4" />
+            Export CSV
           </Button>
+
           <Link
             href="/admin/cars/new"
             className={cn(
-              buttonVariants({ size: "lg" }),
+              buttonVariants({
+                size: "lg",
+              }),
               "h-11 rounded-xl bg-blue-600 font-semibold hover:bg-blue-700",
             )}
           >
-            <Plus className="size-4" /> Add New Car
+            <Plus className="size-4" />
+            Add New Car
           </Link>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Matching fleet", value: total },
-          { label: "Available on page", value: available },
-          { label: "Maintenance on page", value: maintenance },
-          { label: "Inactive on page", value: inactive },
+          {
+            label: "Matching fleet",
+            value: total,
+          },
+          {
+            label: "Available on page",
+            value: available,
+          },
+          {
+            label: "Maintenance on page",
+            value: maintenance,
+          },
+          {
+            label: "Inactive on page",
+            value: inactive,
+          },
         ].map((item) => (
           <article
             key={item.label}
             className="rounded-2xl border bg-white p-5 shadow-sm"
           >
             <p className="text-sm text-slate-500">{item.label}</p>
+
             <p className="mt-2 text-3xl font-bold text-slate-950">
               {query.isPending ? "—" : item.value}
             </p>
@@ -283,9 +384,12 @@ export function AdminCarsPage() {
       </div>
 
       <CarsFilters
-        value={filters}
+        value={{
+          ...filters,
+          search: searchInput,
+        }}
         categories={categories}
-        onChange={changeFilter}
+        onChange={handleFilterChange}
         onReset={resetFilters}
       />
 
@@ -314,12 +418,14 @@ export function AdminCarsPage() {
             onDeactivate={deactivateCar}
             onRestore={restoreCar}
           />
+
           <CarsMobileList
             items={listItems}
             busyCarId={busyCarId}
             onDeactivate={deactivateCar}
             onRestore={restoreCar}
           />
+
           {query.data && (
             <div className="mt-3 overflow-hidden rounded-2xl border md:mt-0 md:rounded-t-none md:border-t-0">
               <CarsPagination

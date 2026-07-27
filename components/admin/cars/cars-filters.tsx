@@ -1,7 +1,11 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { ListFilter, RotateCcw, Search, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,26 +31,36 @@ type CarsFilterChange = <TName extends CarsFilterName>(
   value: CarsFilterState[TName],
 ) => void;
 
-const statusOptions: {
+type CarsFiltersProps = {
+  value: CarsFilterState;
+  categories: string[];
+  onChange: CarsFilterChange;
+  onReset: () => void;
+};
+
+const STATUS_OPTIONS: Array<{
   label: string;
   value: CarsFilterState["status"];
-}[] = [
+}> = [
   { label: "All statuses", value: "all" },
   { label: "Available", value: "available" },
   { label: "Maintenance", value: "maintenance" },
   { label: "Inactive", value: "inactive" },
 ];
 
-const transmissionOptions: {
+const TRANSMISSION_OPTIONS: Array<{
   label: string;
   value: CarsFilterState["transmission"];
-}[] = [
+}> = [
   { label: "All transmissions", value: "all" },
   { label: "Automatic", value: "automatic" },
   { label: "Manual", value: "manual" },
 ];
 
-const sortOptions: { label: string; value: AdminCarsSort }[] = [
+const SORT_OPTIONS: Array<{
+  label: string;
+  value: AdminCarsSort;
+}> = [
   { label: "Newest first", value: "newest" },
   { label: "Oldest first", value: "oldest" },
   { label: "Price: low to high", value: "price-asc" },
@@ -55,120 +69,200 @@ const sortOptions: { label: string; value: AdminCarsSort }[] = [
   { label: "Brand A–Z", value: "brand-asc" },
 ];
 
+function formatCategoryLabel(category: string) {
+  return category
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 export function CarsFilters({
   value,
   categories,
   onChange,
   onReset,
-}: {
-  value: CarsFilterState;
-  categories: string[];
-  onChange: CarsFilterChange;
-  onReset: () => void;
-}) {
+}: CarsFiltersProps) {
   const categoryOptions = [
     { label: "All categories", value: "all" },
-    ...categories.map((category) => ({ label: category, value: category })),
+    ...categories.map((category) => ({
+      label: formatCategoryLabel(category),
+      value: category,
+    })),
   ];
 
+  const hasFilters =
+    value.search.trim() !== "" ||
+    value.status !== "all" ||
+    value.category !== "all" ||
+    value.transmission !== "all" ||
+    value.sort !== "newest";
+
   return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
-      <div className="grid gap-3 xl:grid-cols-[minmax(260px,1fr)_180px_180px_180px_180px_auto]">
-        <label className="relative" htmlFor="admin-cars-search">
-          <span className="sr-only">Search cars</span>
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input
-            id="admin-cars-search"
-            type="search"
-            maxLength={80}
-            value={value.search}
-            onChange={(event) => onChange("search", event.target.value)}
-            placeholder="Search brand, model, or plate..."
-            className="h-11 w-full rounded-xl border bg-slate-50 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-        </label>
+    <Card className="overflow-hidden border-border/70 shadow-sm">
+      <div className="flex items-start gap-3 border-b bg-muted/30 px-5 py-4">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <ListFilter className="size-4" />
+        </div>
 
-        <FilterSelect
-          ariaLabel="Filter by status"
-          items={statusOptions}
-          value={value.status}
-          onValueChange={(nextValue) => onChange("status", nextValue)}
-        />
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">
+            Filter vehicles
+          </h2>
 
-        <FilterSelect
-          ariaLabel="Filter by category"
-          items={categoryOptions}
-          value={value.category}
-          onValueChange={(nextValue) => onChange("category", nextValue)}
-        />
-
-        <FilterSelect
-          ariaLabel="Filter by transmission"
-          items={transmissionOptions}
-          value={value.transmission}
-          onValueChange={(nextValue) => onChange("transmission", nextValue)}
-        />
-
-        <FilterSelect
-          ariaLabel="Sort cars"
-          items={sortOptions}
-          value={value.sort}
-          onValueChange={(nextValue) => onChange("sort", nextValue)}
-        />
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onReset}
-          className="h-11 rounded-xl px-4 text-slate-600"
-        >
-          <X className="size-4" /> Reset
-        </Button>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Search and refine the vehicle inventory.
+          </p>
+        </div>
       </div>
-    </div>
+
+      <CardContent className="p-5">
+        <fieldset>
+          <legend className="sr-only">Vehicle filters</legend>
+
+          <div className="grid gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-12">
+            <div className="space-y-2 md:col-span-2 xl:col-span-6">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="admin-cars-search">Search vehicles</Label>
+
+                <span className="text-xs text-muted-foreground">
+                  Brand, model, or plate
+                </span>
+              </div>
+
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  id="admin-cars-search"
+                  type="search"
+                  maxLength={80}
+                  value={value.search}
+                  onChange={(event) => onChange("search", event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      onChange("search", "");
+                    }
+                  }}
+                  placeholder="Search by brand, model, or plate..."
+                  className="pl-9 pr-10 [&::-webkit-search-cancel-button]:appearance-none"
+                />
+
+                {value.search.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Clear vehicle search"
+                    onClick={() => onChange("search", "")}
+                    className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <FilterSelect
+              id="cars-status"
+              label="Status"
+              items={STATUS_OPTIONS}
+              value={value.status}
+              onValueChange={(status) => onChange("status", status)}
+              className="xl:col-span-3"
+            />
+
+            <FilterSelect
+              id="cars-category"
+              label="Category"
+              items={categoryOptions}
+              value={value.category}
+              onValueChange={(category) => onChange("category", category)}
+              className="xl:col-span-3"
+            />
+
+            <FilterSelect
+              id="cars-transmission"
+              label="Transmission"
+              items={TRANSMISSION_OPTIONS}
+              value={value.transmission}
+              onValueChange={(transmission) =>
+                onChange("transmission", transmission)
+              }
+              className="xl:col-span-3"
+            />
+
+            <FilterSelect
+              id="cars-sort"
+              label="Sort by"
+              items={SORT_OPTIONS}
+              value={value.sort}
+              onValueChange={(sort) => onChange("sort", sort)}
+              className="xl:col-span-3"
+            />
+
+            <div className="flex items-end md:col-span-2 md:justify-end xl:col-span-6">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!hasFilters}
+                onClick={onReset}
+                className="w-full gap-2 sm:w-auto"
+              >
+                <RotateCcw className="size-4" />
+                Reset filters
+              </Button>
+            </div>
+          </div>
+        </fieldset>
+      </CardContent>
+    </Card>
   );
 }
 
+type FilterSelectProps<TValue extends string> = {
+  id: string;
+  label: string;
+  items: Array<{
+    label: string;
+    value: TValue;
+  }>;
+  value: TValue;
+  onValueChange: (value: TValue) => void;
+  className?: string;
+};
+
 function FilterSelect<TValue extends string>({
-  ariaLabel,
+  id,
+  label,
   items,
   value,
   onValueChange,
-}: {
-  ariaLabel: string;
-  items: { label: string; value: TValue }[];
-  value: TValue;
-  onValueChange: (value: TValue) => void;
-}) {
+  className,
+}: FilterSelectProps<TValue>) {
   return (
-    <Select<TValue>
-      items={items}
-      value={value}
-      onValueChange={(nextValue) => {
-        if (nextValue !== null) onValueChange(nextValue);
-      }}
-    >
-      <SelectTrigger
-        aria-label={ariaLabel}
-        className="h-11 w-full rounded-xl border-border bg-white px-3 text-slate-700"
+    <div className={`space-y-2 ${className ?? ""}`}>
+      <Label htmlFor={id}>{label}</Label>
+
+      <Select<TValue>
+        items={items}
+        value={value}
+        onValueChange={(nextValue) => {
+          if (nextValue !== null) {
+            onValueChange(nextValue);
+          }
+        }}
       >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent
-        align="start"
-        alignItemWithTrigger={false}
-        className="rounded-xl"
-      >
-        {items.map((item) => (
-          <SelectItem
-            key={item.value}
-            value={item.value}
-            className="rounded-lg"
-          >
-            {item.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+
+        <SelectContent align="start" alignItemWithTrigger={false}>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
