@@ -1,26 +1,344 @@
 "use client";
+
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, CalendarDays, CarFront, Check, Clock3, Mail, Phone, UserRound, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CarFront,
+  Clock3,
+  Mail,
+  Phone,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
+
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  ADMIN_RESERVATION_TRANSITIONS,
+  ADMIN_RESERVATION_TRANSITION_LABELS,
+} from "@/features/admin/reservations/admin-reservation.types";
 import { useAdminReservation } from "@/features/admin/reservations/hooks/use-admin-reservation";
 import { useUpdateAdminReservationStatus } from "@/features/admin/reservations/hooks/use-update-admin-reservation-status";
+import { AdminReservationRequestError } from "@/features/admin/reservations/services/admin-reservation.service";
 import { cn } from "@/lib/utils";
+import type { ReservationStatus } from "@/types/domain";
+
 import { ReservationActionDialog } from "./reservation-action-dialog";
 import { ReservationStatusBadge } from "./reservation-status-badge";
-import { ReservationsErrorState, ReservationsLoadingSkeleton } from "./reservations-states";
-const money=new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"});
-const date=new Intl.DateTimeFormat("en-US",{dateStyle:"medium"});
-export function AdminReservationDetailsPage({reservationId}:{reservationId:string}){
- const query=useAdminReservation(reservationId); const mutation=useUpdateAdminReservationStatus(); const [action,setAction]=useState<"approve"|"reject">("approve"); const [open,setOpen]=useState(false);
- if(query.isPending)return <ReservationsLoadingSkeleton/>; if(query.isError)return <ReservationsErrorState message={query.error.message} onRetry={()=>query.refetch()}/>;
- const r=query.data;
- function ask(next:"approve"|"reject"){setAction(next);setOpen(true)}
- async function confirm(reason?:string){try{await mutation.mutateAsync({reservationId:r.id,status:action==="approve"?"confirmed":"rejected",reason});toast.success(action==="approve"?"Reservation approved.":"Reservation rejected.");setOpen(false)}catch(error){toast.error(error instanceof Error?error.message:"Unable to update reservation.")}}
- return <div className="space-y-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><Link href="/admin/reservations" className={cn(buttonVariants({variant:"ghost",size:"sm"}),"-ml-3 mb-2")}><ArrowLeft/>Back to reservations</Link><div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-bold tracking-tight">{r.reference}</h1><ReservationStatusBadge status={r.status}/></div><p className="mt-2 text-muted-foreground">Created {date.format(new Date(r.createdAt))}</p></div>{r.status==="pending"&&<div className="flex gap-2"><Button onClick={()=>ask("approve")}><Check/>Approve</Button><Button variant="destructive" onClick={()=>ask("reject")}><X/>Reject</Button></div>}</div><div className="grid gap-5 xl:grid-cols-3"><Card className="rounded-2xl py-5 xl:col-span-2"><CardHeader><CardTitle>Rental information</CardTitle></CardHeader><CardContent className="grid gap-5 sm:grid-cols-2"><Info icon={CalendarDays} label="Pickup date" value={date.format(new Date(r.pickupDate))}/><Info icon={CalendarDays} label="Return date" value={date.format(new Date(r.returnDate))}/><Info icon={Clock3} label="Rental duration" value={`${r.rentalDays} days`}/><Info icon={CarFront} label="Daily price" value={money.format(r.pricePerDaySnapshot)}/><Separator className="sm:col-span-2"/><Price label="Subtotal" value={money.format(r.subtotal)}/><Price label="Total" value={money.format(r.totalPrice)} strong/></CardContent></Card><Card className="rounded-2xl py-5"><CardHeader><CardTitle>Customer</CardTitle></CardHeader><CardContent className="space-y-4"><Info icon={UserRound} label="Full name" value={r.customer.fullName}/><Info icon={Mail} label="Email" value={r.customer.email}/><Info icon={Phone} label="Phone" value={r.customer.phone??"Not provided"}/></CardContent></Card><Card className="rounded-2xl py-5"><CardHeader><CardTitle>Vehicle</CardTitle></CardHeader><CardContent className="space-y-4"><Info icon={CarFront} label="Car" value={`${r.car.brand} ${r.car.model} (${r.car.year})`}/><Price label="Plate number" value={r.car.plateNumber}/><Price label="Category" value={r.car.category}/></CardContent></Card><Card className="rounded-2xl py-5 xl:col-span-2"><CardHeader><CardTitle>Reservation record</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><Price label="Reference" value={r.reference}/><Price label="Current status" value={r.status}/><Price label="Created" value={date.format(new Date(r.createdAt))}/><Price label="Last updated" value={date.format(new Date(r.updatedAt))}/>{r.rejectionReason&&<div className="sm:col-span-2 rounded-xl bg-destructive/5 p-4"><p className="text-sm font-semibold text-destructive">Rejection reason</p><p className="mt-1 text-sm text-muted-foreground">{r.rejectionReason}</p></div>}{r.cancellationReason&&<div className="sm:col-span-2 rounded-xl bg-muted p-4"><p className="text-sm font-semibold">Cancellation reason</p><p className="mt-1 text-sm text-muted-foreground">{r.cancellationReason}</p></div>}</CardContent></Card></div><ReservationActionDialog key={`${action}-${open}`} reservation={r} action={action} open={open} busy={mutation.isPending} onOpenChange={setOpen} onConfirm={confirm}/></div>
+import {
+  ReservationNotFoundState,
+  ReservationsErrorState,
+  ReservationsLoadingSkeleton,
+} from "./reservations-states";
+
+const money = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+const date = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+
+export function AdminReservationDetailsPage({
+  reservationId,
+}: {
+  reservationId: string;
+}) {
+  const query = useAdminReservation(reservationId);
+  const mutation = useUpdateAdminReservationStatus();
+  const [targetStatus, setTargetStatus] = useState<
+    Exclude<ReservationStatus, "pending">
+  >("confirmed");
+  const [open, setOpen] = useState(false);
+
+  if (query.isPending) return <ReservationsLoadingSkeleton />;
+  if (
+    query.isError &&
+    query.error instanceof AdminReservationRequestError &&
+    (query.error.code === "RESERVATION_NOT_FOUND" ||
+      query.error.code === "INVALID_RESERVATION_ID")
+  ) {
+    return <ReservationNotFoundState />;
+  }
+  if (query.isError) {
+    return (
+      <ReservationsErrorState
+        message={query.error.message}
+        onRetry={() => query.refetch()}
+      />
+    );
+  }
+
+  const reservation = query.data;
+  const transitions = ADMIN_RESERVATION_TRANSITIONS[reservation.status];
+  const customerName =
+    reservation.customer.fullName || "Customer unavailable";
+  const carName =
+    reservation.car.brand && reservation.car.model
+      ? `${reservation.car.brand} ${reservation.car.model}`
+      : "Vehicle unavailable";
+
+  function ask(status: Exclude<ReservationStatus, "pending">) {
+    if (mutation.isPending) return;
+    setTargetStatus(status);
+    setOpen(true);
+  }
+
+  async function confirm(reason?: string) {
+    if (mutation.isPending) return;
+    try {
+      await mutation.mutateAsync({
+        reservationId: reservation.id,
+        status: targetStatus,
+        reason,
+      });
+      toast.success("Reservation status updated.");
+      setOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to update the reservation.",
+      );
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Link
+            href="/admin/reservations"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "-ml-3 mb-2",
+            )}
+          >
+            <ArrowLeft /> Back to reservations
+          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Reservation details
+            </h1>
+            <ReservationStatusBadge status={reservation.status} />
+          </div>
+          <p className="mt-2 break-all font-mono text-sm text-muted-foreground">
+            {reservation.id}
+          </p>
+        </div>
+        {transitions.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {transitions.map((status) => (
+              <Button
+                key={status}
+                type="button"
+                variant={
+                  status === "rejected" || status === "cancelled"
+                    ? "destructive"
+                    : "default"
+                }
+                disabled={mutation.isPending}
+                onClick={() => ask(status)}
+              >
+                <ArrowRight />
+                {ADMIN_RESERVATION_TRANSITION_LABELS[status]}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-3">
+        <Card className="rounded-2xl py-5 xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Rental information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-5 sm:grid-cols-2">
+            <Info
+              icon={CalendarDays}
+              label="Pickup date"
+              value={date.format(new Date(reservation.pickupDate))}
+            />
+            <Info
+              icon={CalendarDays}
+              label="Return date"
+              value={date.format(new Date(reservation.returnDate))}
+            />
+            <Info
+              icon={Clock3}
+              label="Rental duration"
+              value={`${reservation.rentalDays} days`}
+            />
+            <Info
+              icon={CarFront}
+              label="Daily price"
+              value={money.format(reservation.pricePerDaySnapshot)}
+            />
+            <Separator className="sm:col-span-2" />
+            <Detail label="Subtotal" value={money.format(reservation.subtotal)} />
+            <Detail
+              label="Total"
+              value={money.format(reservation.totalPrice)}
+              strong
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl py-5">
+          <CardHeader>
+            <CardTitle>Customer</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Info icon={UserRound} label="Full name" value={customerName} />
+            <Info
+              icon={Mail}
+              label="Email"
+              value={reservation.customer.email ?? "Not available"}
+            />
+            <Info
+              icon={Phone}
+              label="Phone"
+              value={reservation.customer.phone ?? "Not provided"}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden rounded-2xl py-5">
+          {reservation.car.primaryImageUrl && (
+            <div className="relative mx-5 aspect-video overflow-hidden rounded-xl bg-muted">
+              <Image
+                src={reservation.car.primaryImageUrl}
+                alt={carName}
+                fill
+                sizes="(max-width: 1280px) 100vw, 33vw"
+                className="object-cover"
+              />
+            </div>
+          )}
+          <CardHeader>
+            <CardTitle>Vehicle</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Info
+              icon={CarFront}
+              label="Car"
+              value={
+                reservation.car.year
+                  ? `${carName} (${reservation.car.year})`
+                  : carName
+              }
+            />
+            <Detail
+              label="Plate number"
+              value={reservation.car.plateNumber ?? "Not available"}
+            />
+            <Detail
+              label="Category"
+              value={reservation.car.category ?? "Not available"}
+            />
+            <Detail label="Car ID" value={reservation.car.id} />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl py-5 xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Reservation record</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <Detail label="Reservation ID" value={reservation.id} />
+            <Detail label="Current status" value={reservation.status} />
+            <Detail
+              label="Created"
+              value={date.format(new Date(reservation.createdAt))}
+            />
+            <Detail
+              label="Last updated"
+              value={date.format(new Date(reservation.updatedAt))}
+            />
+            {reservation.rejectionReason && (
+              <div className="rounded-xl bg-destructive/5 p-4 sm:col-span-2">
+                <p className="text-sm font-semibold text-destructive">
+                  Rejection reason
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {reservation.rejectionReason}
+                </p>
+              </div>
+            )}
+            {reservation.cancellationReason && (
+              <div className="rounded-xl bg-muted p-4 sm:col-span-2">
+                <p className="text-sm font-semibold">Cancellation reason</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {reservation.cancellationReason}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <ReservationActionDialog
+        key={`${targetStatus}-${open}`}
+        reservation={reservation}
+        targetStatus={targetStatus}
+        open={open}
+        busy={mutation.isPending}
+        onOpenChange={setOpen}
+        onConfirm={confirm}
+      />
+    </div>
+  );
 }
-function Info({icon:Icon,label,value}:{icon:typeof CalendarDays;label:string;value:string}){return <div className="flex gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground"><Icon className="size-4"/></span><div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-0.5 font-medium">{value}</p></div></div>}
-function Price({label,value,strong=false}:{label:string;value:string;strong?:boolean}){return <div><p className="text-xs text-muted-foreground">{label}</p><p className={strong?"mt-1 text-xl font-bold":"mt-1 font-medium capitalize"}>{value}</p></div>}
+
+function Info({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof CalendarDays;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex gap-3">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-0.5 break-words font-medium">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={
+          strong
+            ? "mt-1 break-words text-xl font-bold"
+            : "mt-1 break-words font-medium"
+        }
+      >
+        {value}
+      </p>
+    </div>
+  );
+}

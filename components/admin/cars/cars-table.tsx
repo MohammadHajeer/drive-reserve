@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   CarFront,
@@ -89,10 +88,10 @@ export function CarsTable({
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border bg-muted">
                         {item.imageUrl ? (
-                          <Image
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
                             src={item.imageUrl}
                             alt={item.name}
-                            fill
                             sizes="80px"
                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
