@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthHeader } from "@/components/auth/auth-header";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { RegisterForm } from "@/components/forms/register-form";
-import { getSafeInternalRedirectPath } from "@/lib/validations/auth.validation";
+
+import { RegisterContentWithSearchParams } from "./register-content-with-search-params";
 
 export const metadata: Metadata = {
   title: "Create Account",
@@ -12,22 +14,7 @@ export const metadata: Metadata = {
     "Create a DriveReserve account to reserve vehicles, manage rentals, and access your dashboard.",
 };
 
-type RegisterPageProps = {
-  searchParams: Promise<{
-    redirectTo?: string | string[];
-  }>;
-};
-
-export default async function RegisterPage({
-  searchParams,
-}: RegisterPageProps) {
-  const { redirectTo } = await searchParams;
-  const safeRedirectTo = getSafeInternalRedirectPath(redirectTo);
-
-  const loginHref = safeRedirectTo
-    ? `/login?redirectTo=${encodeURIComponent(safeRedirectTo)}`
-    : "/login";
-
+export default function RegisterPage() {
   return (
     <AuthLayout wide>
       <AuthHeader
@@ -36,17 +23,27 @@ export default async function RegisterPage({
         description="Register with DriveReserve to reserve vehicles, manage rentals, and access your fleet dashboard."
       />
 
-      <RegisterForm redirectTo={safeRedirectTo} />
+      <Suspense fallback={<RegisterContentFallback />}>
+        <RegisterContentWithSearchParams />
+      </Suspense>
+    </AuthLayout>
+  );
+}
+
+function RegisterContentFallback() {
+  return (
+    <>
+      <RegisterForm />
 
       <div className="mt-6 border-t border-border pt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
-          href={loginHref}
+          href="/login"
           className="font-semibold text-primary transition-colors hover:text-primary/80"
         >
           Sign in here
         </Link>
       </div>
-    </AuthLayout>
+    </>
   );
 }

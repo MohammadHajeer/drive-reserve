@@ -11,6 +11,12 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("redirectTo"),
   );
 
+  console.log("Email confirmation request received:", {
+    tokenHash,
+    type,
+    redirectTo,
+  });
+
   const successRedirect = redirectTo
     ? new URL(redirectTo, request.nextUrl.origin)
     : new URL("/login", request.nextUrl.origin);
@@ -19,6 +25,10 @@ export async function GET(request: NextRequest) {
   errorRedirect.pathname = "/login";
   errorRedirect.search = "";
   errorRedirect.searchParams.set("verification", "failed");
+
+  if (redirectTo) {
+    errorRedirect.searchParams.set("redirectTo", redirectTo);
+  }
 
   if (!tokenHash || !type) {
     return NextResponse.redirect(errorRedirect);

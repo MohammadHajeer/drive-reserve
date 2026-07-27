@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSafeInternalRedirectPath } from "@/lib/validations/auth.validation";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const redirectTo = getSafeInternalRedirectPath(
+    url.searchParams.get("redirectTo"),
+  );
 
   const loginErrorUrl = new URL("/login", url.origin);
   loginErrorUrl.searchParams.set("error", "google-auth-failed");
+
+  if (redirectTo) {
+    loginErrorUrl.searchParams.set("redirectTo", redirectTo);
+  }
 
   if (!code) {
     return NextResponse.redirect(loginErrorUrl);
@@ -40,7 +48,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(loginErrorUrl);
     }
 
-    const destination = profile.role === "admin" ? "/admin" : "/profile";
+    const destination =
+      redirectTo ?? (profile.role === "admin" ? "/admin" : "/profile");
 
     return NextResponse.redirect(new URL(destination, url.origin));
   } catch (error) {

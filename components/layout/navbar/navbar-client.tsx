@@ -28,16 +28,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLogout } from "@/features/auth/hooks/use-logout";
 import { APP_ROUTES } from "@/lib/routes";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 export type NavbarUser = {
   id: string;
   email: string | null;
   role: "customer" | "admin";
-};
-
-type NavbarClientProps = {
-  user: NavbarUser | null;
 };
 
 const navigation = [
@@ -63,11 +60,12 @@ function getUserInitial(email: string | null) {
   return email?.charAt(0).toUpperCase() || "U";
 }
 
-export function NavbarClient({ user }: NavbarClientProps) {
+export function NavbarClient() {
   const pathname = usePathname();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState<NavbarUser | null>();
   const { logout, isLoggingOut } = useLogout();
 
   const isHomePage = pathname === APP_ROUTES.home;
@@ -85,8 +83,47 @@ export function NavbarClient({ user }: NavbarClientProps) {
 
   async function handleLogout() {
     setIsOpen(false);
-    await logout();
+
+    if (await logout()) {
+      setUser(null);
+    }
   }
+
+  useEffect(() => {
+    const supabase = createClient();
+    let isMounted = true;
+
+    async function loadUser() {
+      const { data, error } = await supabase.auth.getClaims();
+
+      if (!isMounted) return;
+
+      const claims = data?.claims;
+
+      setUser(
+        !error && typeof claims?.sub === "string"
+          ? {
+              id: claims.sub,
+              email: typeof claims.email === "string" ? claims.email : null,
+              role: claims.user_role === "admin" ? "admin" : "customer",
+            }
+          : null,
+      );
+    }
+
+    void loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void loadUser();
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     function handleScroll() {
@@ -199,7 +236,9 @@ export function NavbarClient({ user }: NavbarClientProps) {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            {user ? (
+            {user === undefined ? (
+              <DesktopAuthActionsSkeleton isTransparent={isTransparent} />
+            ) : user ? (
               <AuthenticatedActions
                 user={user}
                 dashboardHref={dashboardHref}
@@ -274,7 +313,9 @@ export function NavbarClient({ user }: NavbarClientProps) {
               })}
             </nav>
 
-            {user ? (
+            {user === undefined ? (
+              <MobileAuthActionsSkeleton />
+            ) : user ? (
               <MobileAuthenticatedActions
                 user={user}
                 dashboardHref={dashboardHref}
@@ -293,6 +334,31 @@ export function NavbarClient({ user }: NavbarClientProps) {
 
       {!isHomePage && <div className="h-18" aria-hidden="true" />}
     </>
+  );
+}
+
+function DesktopAuthActionsSkeleton({
+  isTransparent,
+}: {
+  isTransparent: boolean;
+}) {
+  return (
+    <div
+      aria-label="Checking session"
+      className={cn(
+        "h-10 w-44 animate-pulse rounded-full",
+        isTransparent ? "bg-white/10" : "bg-muted",
+      )}
+    />
+  );
+}
+
+function MobileAuthActionsSkeleton() {
+  return (
+    <div
+      aria-label="Checking session"
+      className="mt-3 h-11 animate-pulse rounded-xl border-t bg-muted"
+    />
   );
 }
 

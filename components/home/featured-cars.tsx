@@ -1,17 +1,39 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import { SectionHeading } from "@/components/common/section-heading";
-import { DEFAULT_PUBLIC_CARS_FILTERS } from "@/lib/cars/public-cars";
-import { getPublicCars } from "@/lib/server/cars/get-public-cars";
+import type { PublicCarListItem } from "@/lib/cars/public-cars";
 import { CarCard } from "../cars/car-card";
 
-export async function FeaturedCars() {
-  const result = await getPublicCars(
-    { ...DEFAULT_PUBLIC_CARS_FILTERS, sort: "newest" },
-    { limit: 3 },
-  );
-  const cars = result.success ? result.data.cars : [];
+type FeaturedCarsResponse = {
+  success: boolean;
+  data?: {
+    cars?: PublicCarListItem[];
+  };
+};
+
+async function fetchFeaturedCars(signal: AbortSignal) {
+  const response = await fetch("/api/cars/featured", {
+    cache: "no-store",
+    signal,
+  });
+  const result = (await response.json()) as FeaturedCarsResponse;
+
+  if (!response.ok || !result.success || !Array.isArray(result.data?.cars)) {
+    throw new Error("Unable to load featured cars.");
+  }
+
+  return result.data.cars;
+}
+
+export function FeaturedCars() {
+  const { data: cars = [], isError, isLoading } = useQuery({
+    queryKey: ["public-cars", "featured"],
+    queryFn: ({ signal }) => fetchFeaturedCars(signal),
+  });
 
   return (
     <section
@@ -35,12 +57,41 @@ export async function FeaturedCars() {
           </Link>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {cars.map((car) => (
-            <CarCard key={car.id} car={car} variant="featured" />
-          ))}
-        </div>
+        {isLoading ? (
+          <FeaturedCarsSkeleton />
+        ) : isError ? (
+          <p className="mt-12 rounded-xl border bg-background p-6 text-sm text-muted-foreground">
+            Featured cars are temporarily unavailable. You can still browse the
+            complete vehicle catalog.
+          </p>
+        ) : cars.length > 0 ? (
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {cars.map((car) => (
+              <CarCard key={car.id} car={car} variant="featured" />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-12 rounded-xl border bg-background p-6 text-sm text-muted-foreground">
+            No featured cars are available right now.
+          </p>
+        )}
       </div>
     </section>
+  );
+}
+
+function FeaturedCarsSkeleton() {
+  return (
+    <div
+      className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+      aria-label="Loading featured cars"
+    >
+      {Array.from({ length: 3 }, (_, index) => (
+        <div
+          key={index}
+          className="h-96 animate-pulse rounded-xl border bg-background"
+        />
+      ))}
+    </div>
   );
 }

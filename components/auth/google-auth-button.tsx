@@ -28,7 +28,11 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleAuthButton() {
+type GoogleAuthButtonProps = {
+  redirectTo?: string;
+};
+
+export function GoogleAuthButton({ redirectTo }: GoogleAuthButtonProps) {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
@@ -48,7 +52,11 @@ export function GoogleAuthButton() {
     if (isRedirecting) return;
 
     setIsRedirecting(true);
-    window.location.assign("/api/auth/google");
+    const googleAuthUrl = redirectTo
+      ? `/api/auth/google?redirectTo=${encodeURIComponent(redirectTo)}`
+      : "/api/auth/google";
+
+    window.location.assign(googleAuthUrl);
   }
 
   return (

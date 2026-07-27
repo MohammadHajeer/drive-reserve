@@ -12,7 +12,7 @@ export function useLogout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   async function logout() {
-    if (isLoggingOut) return;
+    if (isLoggingOut) return false;
 
     setIsLoggingOut(true);
 
@@ -25,13 +25,14 @@ export function useLogout() {
       toast.success("Signed out successfully.");
       router.replace(APP_ROUTES.home);
       router.refresh();
+      return true;
     } catch (error) {
       console.error("Failed to sign out:", error);
       toast.error("Unable to sign out. Please try again.");
       setIsLoggingOut(false);
+      return false;
     }
   }
 
   return { logout, isLoggingOut };
 }
-

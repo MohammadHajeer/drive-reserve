@@ -45,14 +45,10 @@ export async function POST(request: Request) {
     const siteUrl = (
       process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
     ).replace(/\/$/, "");
-    const emailConfirmationUrl = new URL(
-      "/api/auth/confirm",
-      `${siteUrl}/`,
-    );
 
-    if (redirectTo) {
-      emailConfirmationUrl.searchParams.set("redirectTo", redirectTo);
-    }
+    const emailConfirmationUrl = new URL("/api/auth/confirm", `${siteUrl}/`);
+
+    emailConfirmationUrl.searchParams.set("redirectTo", redirectTo ?? "/cars");
 
     const { data, error } = await supabase.auth.signUp({
       email,
