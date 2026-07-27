@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 import { CarSummaryCard } from "@/components/reservation/car-summary-card";
 import { ReservationItineraryCard } from "@/components/reservation/details/reservation-itinerary-card";
+import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
 import { FareSummaryCard } from "./fare-summary-card";
-import { PaymentMethodSelector } from "./payment-method-selector";
 
 export type ConfirmationCar = {
   id: string;
@@ -36,19 +36,26 @@ type ConfirmReservationContentProps = {
 };
 
 function readApiErrorMessage(payload: unknown) {
-  if (typeof payload !== "object" || payload === null) {
-    return null;
-  }
+  if (typeof payload !== "object" || payload === null) return null;
 
   const error = Reflect.get(payload, "error");
-
-  if (typeof error !== "object" || error === null) {
-    return null;
-  }
+  if (typeof error !== "object" || error === null) return null;
 
   const message = Reflect.get(error, "message");
-
   return typeof message === "string" ? message : null;
+}
+
+function readReservationId(payload: unknown) {
+  if (typeof payload !== "object" || payload === null) return null;
+
+  const data = Reflect.get(payload, "data");
+  if (typeof data !== "object" || data === null) return null;
+
+  const reservation = Reflect.get(data, "reservation");
+  if (typeof reservation !== "object" || reservation === null) return null;
+
+  const id = Reflect.get(reservation, "id");
+  return typeof id === "string" ? id : null;
 }
 
 function isSuccessfulResponse(payload: unknown) {
@@ -70,7 +77,6 @@ export function ConfirmReservationContent({
   const router = useRouter();
   const submissionInProgress = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "onsite">("card");
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const searchParams = new URLSearchParams({
@@ -78,17 +84,30 @@ export function ConfirmReservationContent({
     return: returnDate,
   });
   const carDetailsPath = `/cars/${encodeURIComponent(car.id)}?${searchParams.toString()}`;
-
   const primaryImage =
     car.images.find((image) => image.isPrimary) ?? car.images[0];
 
   async function handleReservation() {
-    if (submissionInProgress.current) {
+    if (submissionInProgress.current) return;
+
+    if (!agreeToTerms) {
+      toast.error("Please acknowledge the reservation policy before confirming.");
       return;
     }
 
-    if (!agreeToTerms) {
-      toast.error("Please agree to the rental terms before confirming.");
+    const parsedDates = reservationPreviewSchema.safeParse({
+      carId: car.id,
+      pickupDate,
+      returnDate,
+    });
+
+    if (!parsedDates.success) {
+      const fieldErrors = parsedDates.error.flatten().fieldErrors;
+      toast.error(
+        fieldErrors.pickupDate?.[0] ??
+          fieldErrors.returnDate?.[0] ??
+          "Choose a valid pickup and return date range.",
+      );
       return;
     }
 
@@ -98,14 +117,8 @@ export function ConfirmReservationContent({
     try {
       const response = await fetch("/api/reservations", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          carId: car.id,
-          pickupDate,
-          returnDate,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carId: car.id, pickupDate, returnDate }),
       });
 
       let payload: unknown;
@@ -119,13 +132,22 @@ export function ConfirmReservationContent({
       if (!response.ok || !isSuccessfulResponse(payload)) {
         toast.error(
           readApiErrorMessage(payload) ??
-            "Unable to submit the reservation. Please try again."
+            "Unable to submit the reservation. Please try again.",
         );
         return;
       }
 
+      const reservationId = readReservationId(payload);
+
+      if (!reservationId) {
+        toast.error("The reservation was created, but its details could not be opened.");
+        router.push("/my-reservations");
+        router.refresh();
+        return;
+      }
+
       toast.success("Reservation submitted successfully.");
-      router.push("/cars");
+      router.push(`/my-reservations/${encodeURIComponent(reservationId)}`);
       router.refresh();
     } catch {
       toast.error("Unable to submit the reservation. Please try again.");
@@ -135,25 +157,20 @@ export function ConfirmReservationContent({
     }
   }
 
-  const reservationMock = {
-    pickupDate,
-    returnDate,
-  } as any;
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <Link
         href={carDetailsPath}
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors font-medium"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Car Details
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Back to car details
       </Link>
 
-      <h1 className="text-2xl font-bold mb-8">Confirm Your Reservation</h1>
+      <h1 className="mb-8 text-2xl font-bold">Confirm your reservation</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <CarSummaryCard
             category={car.category}
             name={`${car.brand} ${car.model}`}
@@ -164,15 +181,15 @@ export function ConfirmReservationContent({
             year={car.year}
           />
 
-          <ReservationItineraryCard reservation={reservationMock} />
-
-          <PaymentMethodSelector
-            paymentMethod={paymentMethod}
-            onMethodChange={setPaymentMethod}
+          <ReservationItineraryCard
+            pickupDate={pickupDate}
+            returnDate={returnDate}
+            rentalDays={rentalDays}
+            editHref={carDetailsPath}
           />
         </div>
 
-        <div className="lg:col-span-1">
+        <div>
           <FareSummaryCard
             dailyPrice={pricePerDay}
             days={rentalDays}

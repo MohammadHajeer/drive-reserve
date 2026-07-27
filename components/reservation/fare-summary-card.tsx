@@ -2,6 +2,9 @@
 
 import { LoaderCircle } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+
 type FareSummaryCardProps = {
   dailyPrice: number;
   days: number;
@@ -12,6 +15,11 @@ type FareSummaryCardProps = {
   disabled: boolean;
   isLoading: boolean;
 };
+
+const currency = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 export function FareSummaryCard({
   dailyPrice,
@@ -24,65 +32,54 @@ export function FareSummaryCard({
   isLoading,
 }: FareSummaryCardProps) {
   return (
-    <div className="bg-card text-card-foreground rounded-xl border p-6 shadow-sm sticky top-24 space-y-6">
-      <h3 className="text-lg font-semibold border-b pb-3">Fare Summary</h3>
+    <div className="sticky top-24 space-y-6 rounded-4xl bg-card p-6 text-card-foreground shadow-md ring-1 ring-foreground/5">
+      <h2 className="border-b pb-3 text-lg font-semibold">Fare summary</h2>
 
-      <div className="space-y-3 text-sm">
-        <div className="flex justify-between text-muted-foreground">
-          <span>
-            Vehicle Rental (${dailyPrice.toFixed(2)} × {days}{" "}
-            {days === 1 ? "day" : "days"})
-          </span>
-          <span className="font-medium text-foreground">
-            ${totalPrice.toFixed(2)}
-          </span>
+      <dl className="space-y-3 text-sm">
+        <div className="flex justify-between gap-4 text-muted-foreground">
+          <dt>
+            {currency.format(dailyPrice)} × {days} {days === 1 ? "day" : "days"}
+          </dt>
+          <dd className="font-medium text-foreground">
+            {currency.format(totalPrice)}
+          </dd>
         </div>
-
-        <div className="border-t pt-3 flex justify-between items-center font-bold text-base">
-          <span>Total Amount</span>
-          <span className="text-primary text-xl">
-            ${totalPrice.toFixed(2)}
-          </span>
+        <div className="flex items-center justify-between gap-4 border-t pt-3 text-base font-bold">
+          <dt>Total price</dt>
+          <dd className="text-xl text-primary">{currency.format(totalPrice)}</dd>
         </div>
-      </div>
+      </dl>
 
       <div className="space-y-4 pt-2">
-        <label className="flex items-start gap-2 cursor-pointer text-xs text-muted-foreground">
-          <input
-            type="checkbox"
+        <label className="flex cursor-pointer items-start gap-2 text-xs leading-5 text-muted-foreground">
+          <Checkbox
             checked={agreeToTerms}
-            onChange={(event) => onAgreeChange(event.target.checked)}
+            onCheckedChange={(checked) => onAgreeChange(checked === true)}
             disabled={disabled}
-            className="mt-0.5 rounded text-primary focus:ring-primary accent-primary"
+            aria-label="Acknowledge reservation policy"
           />
           <span>
-            I agree to the{" "}
-            <a href="#" className="text-primary hover:underline">
-              Rental Terms
-            </a>
-            ,{" "}
-            <a href="#" className="text-primary hover:underline">
-              Privacy Policy
-            </a>
-            , and cancellation rules.
+            I understand that this request starts as pending and that cancelling
+            an eligible reservation requires a reason.
           </span>
         </label>
 
-        <button
+        <Button
           type="button"
+          size="lg"
+          className="w-full"
           onClick={onConfirm}
           disabled={disabled}
-          className="flex w-full items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-xl shadow transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? (
             <>
-              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              <LoaderCircle className="animate-spin" aria-hidden="true" />
               Submitting...
             </>
           ) : (
-            "Confirm & Reserve"
+            "Confirm and reserve"
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

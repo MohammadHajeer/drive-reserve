@@ -1,5 +1,4 @@
-"use client";
-
+import Image from "next/image";
 import { Clock, Fuel, Gauge, Users } from "lucide-react";
 
 type CarSummaryCardProps = {
@@ -26,8 +25,13 @@ export function CarSummaryCard({
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="relative w-full md:w-56 h-36 rounded-lg overflow-hidden bg-muted shrink-0">
           {imageSrc ? (
-            
-            <img src={imageSrc} alt={name} className="object-cover" />
+            <Image
+              src={imageSrc}
+              alt={name}
+              fill
+              sizes="(max-width: 768px) 100vw, 224px"
+              className="object-cover"
+            />
           ) : (
             <div className="flex size-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
               {name}

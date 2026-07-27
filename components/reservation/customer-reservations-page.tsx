@@ -15,7 +15,6 @@ import {
   Search,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,10 +28,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CustomerReservation } from "@/features/customer/reservations/customer-reservations.schema";
 import { useCustomerReservations } from "@/features/customer/reservations/hooks/use-customer-reservations";
+import { ReservationStatusBadge } from "@/components/reservation/reservation-status-badge";
 import { APP_ROUTES } from "@/lib/routes";
 import { parseDateOnly } from "@/lib/reservations/reservation-date";
 import { cn } from "@/lib/utils";
-import type { ReservationStatus } from "@/types/domain";
 
 const pageSize = 5;
 const statusOptions = [
@@ -272,17 +271,6 @@ function ReservationCard({ reservation }: { reservation: CustomerReservation }) 
       </Card>
     </Link>
   );
-}
-
-function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
-  const variant =
-    status === "active" || status === "completed"
-      ? "success"
-      : status === "cancelled" || status === "rejected"
-        ? "destructive"
-        : "secondary";
-
-  return <Badge variant={variant}>{capitalize(status)}</Badge>;
 }
 
 function ReservationsSkeleton() {

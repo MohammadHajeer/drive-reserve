@@ -55,7 +55,6 @@ export default function RootLayout({
     >
       <body
         className="flex min-h-svh flex-col bg-background text-foreground"
-        suppressHydrationWarning
       >
         <ThemeProvider
           attribute="class"

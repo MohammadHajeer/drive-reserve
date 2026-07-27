@@ -1,78 +1,86 @@
-"use client";
+import Image from "next/image";
+import {
+  CalendarDays,
+  CarFront,
+  Fuel,
+  Gauge,
+  Hash,
+  Palette,
+  Users,
+} from "lucide-react";
 
-import { CarFront, Clock, Fuel, Gauge, Users } from "lucide-react";
-import type { CustomerReservation } from "@/features/customer/reservations/customer-reservations.schema";
+import { Card, CardContent } from "@/components/ui/card";
+import type { CustomerReservationDetail } from "@/features/customer/reservations/customer-reservations.schema";
 
-const DEFAULT_SEATS = 5;
-const DEFAULT_DRIVE = "Automatic";
-const DEFAULT_ENGINE = "Petrol";
-const DEFAULT_YEAR = 2022;
-
-export function ReservationVehicleCard({ car }: { car: CustomerReservation["car"] }) {
-  const category = car.category ?? "Sedan";
+export function ReservationVehicleCard({
+  car,
+}: {
+  car: CustomerReservationDetail["car"];
+}) {
+  const carName = [car.brand, car.model].filter(Boolean).join(" ");
+  const details = [
+    car.year ? { label: "Year", value: String(car.year), icon: CalendarDays } : null,
+    car.transmission
+      ? { label: "Transmission", value: car.transmission, icon: Gauge }
+      : null,
+    car.fuelType ? { label: "Fuel", value: car.fuelType, icon: Fuel } : null,
+    car.seats ? { label: "Seats", value: String(car.seats), icon: Users } : null,
+    car.color ? { label: "Color", value: car.color, icon: Palette } : null,
+    car.plateNumber
+      ? { label: "Plate number", value: car.plateNumber, icon: Hash }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border p-6 shadow-sm">
-      <div className="flex flex-col md:flex-row gap-6 items-center">
-        <div className="relative w-full md:w-56 h-36 rounded-lg overflow-hidden bg-muted shrink-0">
-          {car.imageUrl ? (
-           
-            <img
-              src={car.imageUrl}
-              alt={car.name}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-              <CarFront className="size-8" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 w-full space-y-4">
-          <div>
-            <span className="text-xs uppercase tracking-wide bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full">
-              {category}
-            </span>
-            <h2 className="text-xl font-bold mt-2">{car.name}</h2>
+    <Card>
+      <CardContent>
+        <div className="flex flex-col gap-6 md:flex-row">
+          <div className="relative flex h-52 w-full shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-muted md:h-44 md:w-64">
+            {car.imageUrl ? (
+              <Image
+                src={car.imageUrl}
+                alt={carName || "Reserved vehicle"}
+                fill
+                sizes="(max-width: 768px) 100vw, 256px"
+                className="object-cover"
+              />
+            ) : (
+              <CarFront className="size-10 text-muted-foreground" aria-hidden="true" />
+            )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-            <div className="bg-muted/40 border rounded-lg p-2.5 text-center">
-              <Users className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
-                Seats
-              </span>
-              <span className="text-xs font-semibold">{DEFAULT_SEATS}</span>
-            </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-primary">Vehicle details</p>
+            <h2 className="mt-1 text-xl font-bold">
+              {carName || "Vehicle details unavailable"}
+            </h2>
+            {car.category && (
+              <p className="mt-1 capitalize text-muted-foreground">{car.category}</p>
+            )}
 
-            <div className="bg-muted/40 border rounded-lg p-2.5 text-center">
-              <Gauge className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
-                Drive
-              </span>
-              <span className="text-xs font-semibold capitalize">{DEFAULT_DRIVE}</span>
-            </div>
-
-            <div className="bg-muted/40 border rounded-lg p-2.5 text-center">
-              <Fuel className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
-                Engine
-              </span>
-              <span className="text-xs font-semibold capitalize">{DEFAULT_ENGINE}</span>
-            </div>
-
-            <div className="bg-muted/40 border rounded-lg p-2.5 text-center">
-              <Clock className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
-                Year
-              </span>
-              <span className="text-xs font-semibold">{DEFAULT_YEAR}</span>
-            </div>
+            {details.length ? (
+              <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {details.map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="rounded-2xl bg-muted/50 p-3">
+                    <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Icon className="size-3.5" aria-hidden="true" />
+                      {label}
+                    </dt>
+                    <dd className="mt-1 truncate text-sm font-semibold capitalize">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                The vehicle relation is unavailable, but the reservation dates and
+                pricing remain valid.
+              </p>
+            )}
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
-
