@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
-import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
 
 import { CarSummaryCard } from "./car-summary-card";
 import { FareSummaryCard } from "./fare-summary-card";
