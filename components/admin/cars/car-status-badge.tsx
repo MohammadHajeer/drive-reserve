@@ -2,9 +2,11 @@ import type { CarStatus } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 const styles: Record<CarStatus, string> = {
-  available: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  maintenance: "bg-amber-50 text-amber-700 ring-amber-200",
-  inactive: "bg-slate-100 text-slate-600 ring-slate-200",
+  available:
+    "bg-emerald-500/10 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300 dark:ring-emerald-400/20",
+  maintenance:
+    "bg-amber-500/10 text-amber-700 ring-amber-500/20 dark:text-amber-300 dark:ring-amber-400/20",
+  inactive: "bg-muted text-muted-foreground ring-border",
 };
 
 export function CarStatusBadge({ status }: { status: CarStatus }) {

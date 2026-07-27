@@ -18,7 +18,7 @@ export default function NewCarPage() {
           href="/admin/cars"
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "-ml-3 rounded-xl text-slate-600",
+            "-ml-3 rounded-xl text-muted-foreground",
           )}
         >
           <ArrowLeft /> Back to cars
@@ -28,13 +28,13 @@ export default function NewCarPage() {
             <CarFront className="size-6" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-blue-600">
+            <p className="text-sm font-semibold text-primary">
               Fleet management
             </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">
               Add New Car
             </h1>
-            <p className="mt-2 max-w-2xl text-slate-500">
+            <p className="mt-2 max-w-2xl text-muted-foreground">
               Create the fleet record, configure its availability, and add
               customer-facing images in one flow.
             </p>

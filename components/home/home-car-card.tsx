@@ -52,8 +52,8 @@ export function HomeCarCard({ car }: HomeCarCardProps) {
         <span
           className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${
             isAvailable
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-slate-200 text-slate-700"
+              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              : "bg-muted text-muted-foreground"
           }`}
         >
           {car.status}

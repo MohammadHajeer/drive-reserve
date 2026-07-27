@@ -96,7 +96,7 @@ export function RegisterForm({ redirectTo }: RegisterFormProps) {
 
   if (submittedEmail) {
     return (
-      <div className="rounded-2xl border border-emerald-300/30 bg-emerald-50 p-5 text-sm text-emerald-800">
+      <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-sm text-emerald-800 dark:text-emerald-300">
         <p className="font-semibold">Check your email</p>
 
         <p className="mt-2 leading-6">{registrationSubmittedMessage}</p>

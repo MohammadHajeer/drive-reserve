@@ -454,12 +454,12 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
       {partialSuccess ? (
         <div
           role="status"
-          className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950"
+          className="flex gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-amber-950 dark:text-amber-200"
         >
           <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-amber-600" />
           <div>
             <p className="font-semibold">The car record was created.</p>
-            <p className="mt-1 text-sm text-amber-800">
+            <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
               Only the image upload failed. Vehicle fields are locked to prevent
               a duplicate record; retry the upload below or finish without
               images.
@@ -602,7 +602,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
                   disabled={fieldsDisabled}
                   aria-invalid={fieldState.invalid}
                   placeholder="Describe comfort, driving experience, and standout features..."
-                  className="min-h-32 resize-y rounded-xl border-border bg-white"
+                  className="min-h-32 resize-y rounded-xl border-border bg-background"
                 />
                 <FieldDescription>
                   Optional customer-facing copy, up to 3,000 characters.
@@ -622,7 +622,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
             or WebP images per upload. Each image can be up to 5 MB.
           </CardDescription>
           <CardAction>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
               {existingImages.length + pendingImages.length} image
               {existingImages.length + pendingImages.length === 1 ? "" : "s"}
             </span>
@@ -643,7 +643,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
                 addPendingImages(event.currentTarget.files);
                 event.currentTarget.value = "";
               }}
-              className="h-12 rounded-xl border-border bg-white file:mr-3 file:rounded-lg file:bg-slate-100 file:px-3"
+              className="h-12 rounded-xl border-border bg-background file:mr-3 file:rounded-lg file:bg-muted file:px-3"
             />
             <FieldDescription>
               {mode === "create"
@@ -657,7 +657,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
           {imageError ? (
             <div
               role="alert"
-              className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+              className="flex gap-3 rounded-xl border border-destructive/25 bg-destructive/10 p-4 text-sm text-destructive"
             >
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span>{imageError}</span>
@@ -667,11 +667,11 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
           {uploadMutation.isPending ? (
             <div className="space-y-2" aria-live="polite">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-foreground">
                   Uploading {pendingImages.length} image
                   {pendingImages.length === 1 ? "" : "s"}
                 </span>
-                <span className="text-slate-500">{uploadProgress ?? 0}%</span>
+                <span className="text-muted-foreground">{uploadProgress ?? 0}%</span>
               </div>
               <div
                 role="progressbar"
@@ -679,7 +679,7 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={uploadProgress ?? 0}
-                className="h-2 overflow-hidden rounded-full bg-slate-100"
+                className="h-2 overflow-hidden rounded-full bg-muted"
               >
                 <div
                   className="h-full rounded-full bg-blue-600 transition-[width]"
@@ -690,12 +690,12 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
           ) : null}
 
           {existingImages.length === 0 && pendingImages.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-slate-50 px-6 py-10 text-center">
-              <ImagePlus className="mx-auto size-8 text-slate-400" />
-              <p className="mt-3 font-medium text-slate-700">
+            <div className="rounded-2xl border border-dashed bg-muted/30 px-6 py-10 text-center">
+              <ImagePlus className="mx-auto size-8 text-muted-foreground" />
+              <p className="mt-3 font-medium text-foreground">
                 No car images yet
               </p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Choose images above to build the vehicle gallery.
               </p>
             </div>
@@ -746,22 +746,22 @@ export function CarForm({ mode, initialCar }: CarFormProps) {
       {formError ? (
         <div
           role="alert"
-          className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900"
+          className="flex gap-3 rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-destructive"
         >
           <AlertCircle className="mt-0.5 size-5 shrink-0" />
           <div>
             <p className="font-semibold">The car could not be saved.</p>
-            <p className="mt-1 text-sm text-red-700">{formError}</p>
+            <p className="mt-1 text-sm text-destructive/90">{formError}</p>
           </div>
         </div>
       ) : null}
 
       <Card
         size="sm"
-        className="sticky bottom-4 z-20 rounded-2xl border bg-white/95 shadow-lg backdrop-blur"
+        className="sticky bottom-4 z-20 rounded-2xl border bg-card/95 shadow-lg backdrop-blur"
       >
         <CardFooter className="flex-col justify-between gap-3 sm:flex-row">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {mode === "edit"
               ? isDirty
                 ? "You have unsaved vehicle changes."
@@ -845,7 +845,7 @@ function CarInputField({
           <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
           <div className="relative">
             {prefix ? (
-              <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-sm text-slate-500">
+              <span className="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-sm text-muted-foreground">
                 {prefix}
               </span>
             ) : null}
@@ -864,7 +864,7 @@ function CarInputField({
               }
               aria-invalid={fieldState.invalid}
               className={cn(
-                "h-11 rounded-xl border-border bg-white",
+                "h-11 rounded-xl border-border bg-background",
                 prefix && "pl-7",
                 className,
               )}
@@ -910,7 +910,7 @@ function CarSelectField<TValue extends string>({
             <SelectTrigger
               id={inputId}
               aria-invalid={fieldState.invalid}
-              className="h-11 w-full rounded-xl border-border bg-white"
+              className="h-11 w-full rounded-xl border-border bg-background"
             >
               <SelectValue />
             </SelectTrigger>
@@ -953,8 +953,8 @@ function ExistingImageCard({
   onMakePrimary: () => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-2xl border bg-white">
-      <div className="relative aspect-4/3 bg-slate-100">
+    <article className="overflow-hidden rounded-2xl border bg-card">
+      <div className="relative aspect-4/3 bg-muted">
         {/* Supabase storage hosts are configured per environment. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -982,7 +982,7 @@ function ExistingImageCard({
             Make primary
           </Button>
         ) : (
-          <span className="flex flex-1 items-center text-xs font-medium text-slate-500">
+          <span className="flex flex-1 items-center text-xs font-medium text-muted-foreground">
             Shown first to customers
           </span>
         )}
@@ -1012,8 +1012,8 @@ function PendingImageCard({
   onRemove: () => void;
 }) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-dashed border-blue-200 bg-blue-50/40">
-      <div className="relative aspect-4/3 bg-slate-100">
+    <article className="overflow-hidden rounded-2xl border border-dashed border-primary/25 bg-primary/5">
+      <div className="relative aspect-4/3 bg-muted">
         {/* Blob URLs are local previews and should not use the image optimizer. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -1021,7 +1021,7 @@ function PendingImageCard({
           alt={`Selected preview for ${image.file.name}`}
           className="h-full w-full object-cover"
         />
-        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm">
+        <span className="absolute left-3 top-3 rounded-full bg-background/95 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm">
           Ready to upload
         </span>
         <Button
@@ -1031,16 +1031,16 @@ function PendingImageCard({
           disabled={disabled}
           onClick={onRemove}
           aria-label={`Remove ${image.file.name}`}
-          className="absolute right-3 top-3 rounded-full bg-white shadow-sm"
+          className="absolute right-3 top-3 rounded-full bg-background shadow-sm"
         >
           <X />
         </Button>
       </div>
       <div className="p-3">
-        <p className="truncate text-sm font-medium text-slate-700">
+        <p className="truncate text-sm font-medium text-foreground">
           {image.file.name}
         </p>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-muted-foreground">
           {(image.file.size / (1024 * 1024)).toFixed(1)} MB
         </p>
       </div>

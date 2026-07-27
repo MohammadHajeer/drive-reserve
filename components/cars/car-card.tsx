@@ -132,7 +132,7 @@ function CarImage({ car, href, isListView, onNavigate }: CarImageProps) {
       {isListView && (
         <span className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-background/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur">
           <CheckCircle2
-            className="size-3.5 text-emerald-600"
+            className="size-3.5 text-emerald-600 dark:text-emerald-400"
             aria-hidden="true"
           />
           {titleCase(car.status)}
@@ -226,7 +226,7 @@ function ListCardContent({
             <span className="ml-1 text-xs text-muted-foreground">/ day</span>
           </p>
 
-          <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-emerald-800">
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-emerald-800 dark:text-emerald-300">
             <CalendarCheck2
               className="mt-0.5 size-4 shrink-0"
               aria-hidden="true"
@@ -234,7 +234,7 @@ function ListCardContent({
 
             <div>
               <p className="text-xs font-semibold">Available for booking</p>
-              <p className="mt-0.5 text-[11px] text-emerald-700">
+              <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">
                 Select dates to check availability.
               </p>
             </div>
@@ -304,7 +304,7 @@ function GridCardContent({
               <>
                 <span aria-hidden="true">•</span>
 
-                <span className="inline-flex items-center gap-1 text-emerald-700">
+                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
                   <CheckCircle2 className="size-3.5" aria-hidden="true" />
                   {availability}
                 </span>

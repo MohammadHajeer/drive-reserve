@@ -10,31 +10,31 @@ export function CarsListLoadingSkeleton() {
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="overflow-hidden rounded-2xl border bg-white"
+            className="overflow-hidden rounded-2xl border bg-card"
           >
-            <div className="h-44 animate-pulse bg-slate-100" />
+            <div className="h-44 animate-pulse bg-muted" />
             <div className="space-y-4 p-4">
-              <div className="h-5 w-2/3 animate-pulse rounded bg-slate-100" />
-              <div className="h-4 w-1/2 animate-pulse rounded bg-slate-100" />
-              <div className="h-9 animate-pulse rounded-xl bg-slate-100" />
+              <div className="h-5 w-2/3 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+              <div className="h-9 animate-pulse rounded-xl bg-muted" />
             </div>
           </div>
         ))}
       </div>
       <div
-        className="hidden overflow-hidden rounded-2xl border bg-white md:block"
+        className="hidden overflow-hidden rounded-2xl border bg-card md:block"
         aria-label="Loading cars"
       >
-        <div className="h-14 animate-pulse border-b bg-slate-100" />
+        <div className="h-14 animate-pulse border-b bg-muted" />
         {Array.from({ length: 7 }).map((_, index) => (
           <div
             key={index}
             className="flex items-center gap-4 border-b p-4 last:border-b-0"
           >
-            <div className="h-14 w-20 animate-pulse rounded-xl bg-slate-100" />
-            <div className="h-4 flex-1 animate-pulse rounded bg-slate-100" />
-            <div className="h-4 w-24 animate-pulse rounded bg-slate-100" />
-            <div className="hidden h-4 w-20 animate-pulse rounded bg-slate-100 lg:block" />
+            <div className="h-14 w-20 animate-pulse rounded-xl bg-muted" />
+            <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+            <div className="hidden h-4 w-20 animate-pulse rounded bg-muted lg:block" />
           </div>
         ))}
       </div>
@@ -44,17 +44,17 @@ export function CarsListLoadingSkeleton() {
 
 export function CarsLoadingSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-white">
-      <div className="h-14 animate-pulse border-b bg-slate-100" />
+    <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="h-14 animate-pulse border-b bg-muted" />
       {Array.from({ length: 7 }).map((_, index) => (
         <div
           key={index}
           className="flex items-center gap-4 border-b p-4 last:border-b-0"
         >
-          <div className="h-14 w-20 animate-pulse rounded-xl bg-slate-100" />
-          <div className="h-4 flex-1 animate-pulse rounded bg-slate-100" />
-          <div className="hidden h-4 w-24 animate-pulse rounded bg-slate-100 md:block" />
-          <div className="hidden h-4 w-20 animate-pulse rounded bg-slate-100 lg:block" />
+          <div className="h-14 w-20 animate-pulse rounded-xl bg-muted" />
+          <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+          <div className="hidden h-4 w-24 animate-pulse rounded bg-muted md:block" />
+          <div className="hidden h-4 w-20 animate-pulse rounded bg-muted lg:block" />
         </div>
       ))}
     </div>
@@ -63,14 +63,14 @@ export function CarsLoadingSkeleton() {
 
 export function CarsEmptyState() {
   return (
-    <div className="rounded-2xl border bg-white px-6 py-16 text-center shadow-sm">
-      <span className="mx-auto grid size-14 place-items-center rounded-full bg-blue-50 text-blue-600">
+    <div className="rounded-2xl border bg-card px-6 py-16 text-center shadow-sm">
+      <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
         <CarFront />
       </span>
-      <h2 className="mt-4 text-lg font-semibold text-slate-950">
+      <h2 className="mt-4 text-lg font-semibold text-foreground">
         Your fleet is empty
       </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
         Add your first vehicle to start managing availability and pricing.
       </p>
       <Link
@@ -92,14 +92,14 @@ export function CarsNoResultsState({
   onReset: () => void;
 }) {
   return (
-    <div className="rounded-2xl border bg-white px-6 py-16 text-center shadow-sm">
-      <span className="mx-auto grid size-14 place-items-center rounded-full bg-slate-100 text-slate-500">
+    <div className="rounded-2xl border bg-card px-6 py-16 text-center shadow-sm">
+      <span className="mx-auto grid size-14 place-items-center rounded-full bg-muted text-muted-foreground">
         <SearchX />
       </span>
-      <h2 className="mt-4 text-lg font-semibold text-slate-950">
+      <h2 className="mt-4 text-lg font-semibold text-foreground">
         No matching cars
       </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
         Try a different search or clear the filters to see the full fleet.
       </p>
       <Button
@@ -122,11 +122,11 @@ export function CarsErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-12 text-center">
-      <h2 className="text-lg font-semibold text-red-900">
+    <div className="rounded-2xl border border-destructive/25 bg-destructive/10 px-6 py-12 text-center">
+      <h2 className="text-lg font-semibold text-destructive">
         Could not load the fleet
       </h2>
-      <p className="mt-2 text-sm text-red-700">{message}</p>
+      <p className="mt-2 text-sm text-destructive/90">{message}</p>
       <Button
         className="mt-5"
         variant="outline"

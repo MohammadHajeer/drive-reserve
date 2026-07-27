@@ -311,15 +311,15 @@ export function AdminCarsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-blue-600">
+          <p className="text-sm font-semibold text-primary">
             Fleet operations
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">
             Car Management
           </h1>
 
-          <p className="mt-2 max-w-2xl text-slate-500">
+          <p className="mt-2 max-w-2xl text-muted-foreground">
             Search, review, update, and safely deactivate every vehicle in the
             fleet.
           </p>
@@ -330,7 +330,7 @@ export function AdminCarsPage() {
             type="button"
             variant="outline"
             size="lg"
-            className="h-11 rounded-xl bg-white font-semibold"
+            className="h-11 rounded-xl bg-background font-semibold"
           >
             <Download className="size-4" />
             Export CSV
@@ -372,11 +372,11 @@ export function AdminCarsPage() {
         ].map((item) => (
           <article
             key={item.label}
-            className="rounded-2xl border bg-white p-5 shadow-sm"
+            className="rounded-2xl border bg-card p-5 text-card-foreground shadow-sm"
           >
-            <p className="text-sm text-slate-500">{item.label}</p>
+            <p className="text-sm text-muted-foreground">{item.label}</p>
 
-            <p className="mt-2 text-3xl font-bold text-slate-950">
+            <p className="mt-2 text-3xl font-bold text-foreground">
               {query.isPending ? "—" : item.value}
             </p>
           </article>

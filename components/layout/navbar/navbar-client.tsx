@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -236,6 +237,13 @@ export function NavbarClient() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
+            <ThemeToggle
+              className={cn(
+                isTransparent &&
+                  "border-white/20 bg-white/10 text-white backdrop-blur-md hover:bg-white/15 hover:text-white",
+              )}
+            />
+
             {user === undefined ? (
               <DesktopAuthActionsSkeleton isTransparent={isTransparent} />
             ) : user ? (
@@ -312,6 +320,13 @@ export function NavbarClient() {
                 );
               })}
             </nav>
+
+            <div className="mt-3 flex items-center justify-between border-t px-1 pt-3">
+              <span className="text-sm font-medium text-muted-foreground">
+                Appearance
+              </span>
+              <ThemeToggle />
+            </div>
 
             {user === undefined ? (
               <MobileAuthActionsSkeleton />

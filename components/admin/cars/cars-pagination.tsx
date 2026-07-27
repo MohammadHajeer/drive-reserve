@@ -16,13 +16,13 @@ export function CarsPagination({
   const end = Math.min(pagination.page * pagination.limit, pagination.total);
 
   return (
-    <div className="flex flex-col gap-3 border-t bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-slate-500">
+    <div className="flex flex-col gap-3 border-t bg-card px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
         Showing{" "}
-        <strong className="text-slate-700">
+        <strong className="text-foreground">
           {start}–{end}
         </strong>{" "}
-        of <strong className="text-slate-700">{pagination.total}</strong> cars
+        of <strong className="text-foreground">{pagination.total}</strong> cars
       </p>
       <div className="flex items-center gap-2">
         <Button

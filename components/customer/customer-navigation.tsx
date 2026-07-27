@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { CalendarDays, CarFront, UserRound } from "lucide-react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { APP_ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,7 @@ export function CustomerNavigation({
               </span>
             </div>
 
+            <ThemeToggle />
             <LogoutButton compact />
           </div>
         </div>

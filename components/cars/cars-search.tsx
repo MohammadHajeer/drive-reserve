@@ -70,9 +70,9 @@ export function CarsSearch({
         />
       </div>
       {mobileFilters}
-      <p className="shrink-0 text-xs text-muted-foreground" aria-live="polite">
+      <div className="shrink-0 text-xs text-muted-foreground" aria-live="polite">
         {total}
-      </p>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type AdminHeaderProps = {
   onMenuClick: () => void;
@@ -40,7 +41,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         </p>
       </div>
 
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
         <div className="flex items-center gap-3 rounded-xl border bg-card px-2.5 py-2 sm:px-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
             {initials}
