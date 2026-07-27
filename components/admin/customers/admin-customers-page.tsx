@@ -1,11 +1,231 @@
 "use client";
-import { useMemo,useState } from "react"; import { usePathname,useSearchParams } from "next/navigation"; import { toast } from "sonner";
-import type { AdminCustomer,AdminCustomersQuery,CustomerSort,CustomerStatus } from "@/features/admin/customers/admin-customer.types"; import { useAdminCustomers } from "@/features/admin/customers/hooks/use-admin-customers"; import { useUpdateAdminCustomerStatus } from "@/features/admin/customers/hooks/use-update-admin-customer-status";
-import { CustomerCard } from "./customer-card"; import { CustomerStatusDialog } from "./customer-status-dialog"; import { CustomerSummaryCards } from "./customer-summary-cards"; import { CustomersFilters,type CustomersFilterState } from "./customers-filters"; import { CustomersPagination } from "./customers-pagination"; import { CustomersEmptyState,CustomersErrorState,CustomersLoadingSkeleton,CustomersNoResultsState } from "./customers-states";
-const isStatus=(v:string|null):v is CustomerStatus=>v==="active"||v==="suspended"; const sorts:CustomerSort[]=["newest","oldest","most-reservations","highest-spend"]; const isSort=(v:string|null):v is CustomerSort=>Boolean(v&&sorts.includes(v as CustomerSort));
-export function AdminCustomersPage(){const pathname=usePathname();const params=useSearchParams();const [selected,setSelected]=useState<AdminCustomer>();const [nextStatus,setNextStatus]=useState<CustomerStatus>("suspended");const [open,setOpen]=useState(false);const page=Math.max(1,Number(params.get("page"))||1);
-const filters=useMemo<CustomersFilterState>(()=>({search:params.get("search")??"",status:isStatus(params.get("status"))?params.get("status") as CustomerStatus:"all",sort:isSort(params.get("sort"))?params.get("sort") as CustomerSort:"newest",joinedFrom:params.get("joinedFrom")??"",joinedTo:params.get("joinedTo")??""}),[params]);
-const input=useMemo<AdminCustomersQuery>(()=>({search:filters.search||undefined,status:filters.status==="all"?undefined:filters.status,sort:filters.sort,joinedFrom:filters.joinedFrom||undefined,joinedTo:filters.joinedTo||undefined,page,limit:6}),[filters,page]);const query=useAdminCustomers(input);const mutation=useUpdateAdminCustomerStatus();
-function replace(next:URLSearchParams){const qs=next.toString();window.history.replaceState(null,"",qs?`${pathname}?${qs}`:pathname)} function change<K extends keyof CustomersFilterState>(key:K,value:CustomersFilterState[K]){const next=new URLSearchParams(params.toString());if(value===""||value==="all"||value==="newest")next.delete(key);else next.set(key,String(value));next.set("page","1");replace(next)} function reset(){replace(new URLSearchParams())} function changePage(p:number){const next=new URLSearchParams(params.toString());next.set("page",String(p));replace(next)} function request(customer:AdminCustomer,status:CustomerStatus){setSelected(customer);setNextStatus(status);setOpen(true)} async function confirm(){if(!selected)return;try{await mutation.mutateAsync({customerId:selected.id,status:nextStatus});toast.success(nextStatus==="suspended"?"Customer suspended.":"Customer reactivated.");setOpen(false)}catch(error){toast.error(error instanceof Error?error.message:"Unable to update customer.")}}
-const hasFilters=filters.search!==""||filters.status!=="all"||filters.joinedFrom!==""||filters.joinedTo!==""||filters.sort!=="newest";
-return <div className="space-y-6"><div><p className="text-sm font-semibold text-primary">Customer operations</p><h1 className="mt-1 text-3xl font-bold tracking-tight">Customers</h1><p className="mt-2 max-w-2xl text-muted-foreground">Explore customer profiles, review activity, and control reservation access.</p></div>{query.data&&<CustomerSummaryCards summary={query.data.summary}/>}<CustomersFilters value={filters} onChange={change} onReset={reset}/>{query.isPending?<CustomersLoadingSkeleton/>:query.isError?<CustomersErrorState message={query.error.message} onRetry={()=>query.refetch()}/>:query.data.customers.length===0?(hasFilters?<CustomersNoResultsState onReset={reset}/>:<CustomersEmptyState/>):<><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{query.data.customers.map(customer=><CustomerCard key={customer.id} customer={customer} onStatusChange={request}/>)}</div><CustomersPagination pagination={query.data.pagination} onPageChange={changePage}/></>}<CustomerStatusDialog customer={selected} status={nextStatus} open={open} busy={mutation.isPending} onOpenChange={setOpen} onConfirm={confirm}/></div>}
+
+import { useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+
+import {
+  ADMIN_CUSTOMERS_DEFAULTS,
+  ADMIN_CUSTOMERS_PAGE_SIZES,
+  type AdminCustomersQuery,
+  type AdminCustomersSort,
+} from "@/features/admin/customers/admin-customer.types";
+import { useAdminCustomers } from "@/features/admin/customers/hooks/use-admin-customers";
+
+import { CustomerCard } from "./customer-card";
+import { CustomerSummaryCards } from "./customer-summary-cards";
+import {
+  CustomersFilters,
+  type CustomersFilterState,
+} from "./customers-filters";
+import { CustomersPagination } from "./customers-pagination";
+import {
+  CustomersEmptyState,
+  CustomersErrorState,
+  CustomersLoadingSkeleton,
+  CustomersNoResultsState,
+} from "./customers-states";
+import { useAdminCustomersUrl } from "./use-admin-customers-url";
+
+function parsePositiveInteger(value: string | null, fallback: number) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
+function parseLimit(value: string | null) {
+  const limit = parsePositiveInteger(value, ADMIN_CUSTOMERS_DEFAULTS.limit);
+  return ADMIN_CUSTOMERS_PAGE_SIZES.some((size) => size === limit)
+    ? limit
+    : ADMIN_CUSTOMERS_DEFAULTS.limit;
+}
+
+function parseSort(value: string | null): AdminCustomersSort {
+  return value === "oldest" ? "oldest" : ADMIN_CUSTOMERS_DEFAULTS.sort;
+}
+
+export function AdminCustomersPage() {
+  const searchParams = useSearchParams();
+  const { isPending: isUrlPending, replaceQuery } = useAdminCustomersUrl();
+  const legacySearch = searchParams.get("search");
+  const filters = useMemo<CustomersFilterState>(
+    () => ({
+      q: searchParams.get("q") ?? legacySearch ?? "",
+      sort: parseSort(searchParams.get("sort")),
+      joinedFrom: searchParams.get("joinedFrom") ?? "",
+      joinedTo: searchParams.get("joinedTo") ?? "",
+      limit: parseLimit(searchParams.get("limit")),
+    }),
+    [legacySearch, searchParams],
+  );
+  const rawPage = searchParams.get("page");
+  const page = parsePositiveInteger(
+    rawPage,
+    ADMIN_CUSTOMERS_DEFAULTS.page,
+  );
+  const queryInput = useMemo<AdminCustomersQuery>(
+    () => ({
+      q: filters.q || undefined,
+      sort: filters.sort,
+      joinedFrom: filters.joinedFrom || undefined,
+      joinedTo: filters.joinedTo || undefined,
+      page,
+      limit: filters.limit,
+    }),
+    [filters, page],
+  );
+  const query = useAdminCustomers(queryInput);
+  const customers = query.data?.customers ?? [];
+  const isUpdatingResults = isUrlPending || query.isFetching;
+  const hasFilters =
+    filters.q.trim() !== "" ||
+    filters.sort !== ADMIN_CUSTOMERS_DEFAULTS.sort ||
+    filters.joinedFrom !== "" ||
+    filters.joinedTo !== "" ||
+    filters.limit !== ADMIN_CUSTOMERS_DEFAULTS.limit;
+
+  const changeFilter = useCallback(
+    <K extends keyof CustomersFilterState>(
+      name: K,
+      value: CustomersFilterState[K],
+    ) => {
+      let urlValue: string | undefined = String(value);
+      if (
+        urlValue === "" ||
+        (name === "sort" && urlValue === ADMIN_CUSTOMERS_DEFAULTS.sort) ||
+        (name === "limit" &&
+          Number(value) === ADMIN_CUSTOMERS_DEFAULTS.limit)
+      ) {
+        urlValue = undefined;
+      }
+      replaceQuery([{ name, value: urlValue }]);
+    },
+    [replaceQuery],
+  );
+
+  const resetFilters = useCallback(() => {
+    replaceQuery(
+      [
+        "q",
+        "search",
+        "status",
+        "sort",
+        "joinedFrom",
+        "joinedTo",
+        "limit",
+      ].map((name) => ({ name })),
+    );
+  }, [replaceQuery]);
+
+  const changePage = useCallback(
+    (nextPage: number) => {
+      const normalizedPage = Math.max(1, nextPage);
+      replaceQuery(
+        [
+          {
+            name: "page",
+            value:
+              normalizedPage === ADMIN_CUSTOMERS_DEFAULTS.page
+                ? undefined
+                : String(normalizedPage),
+          },
+        ],
+        false,
+      );
+    },
+    [replaceQuery],
+  );
+
+  useEffect(() => {
+    const updates: { name: string; value?: string }[] = [];
+
+    if (searchParams.has("search")) {
+      updates.push({ name: "search" });
+      if (!searchParams.has("q") && legacySearch?.trim()) {
+        updates.push({ name: "q", value: legacySearch });
+      }
+    }
+    if (searchParams.has("status")) updates.push({ name: "status" });
+
+    if (updates.length > 0) replaceQuery(updates);
+  }, [legacySearch, replaceQuery, searchParams]);
+
+  useEffect(() => {
+    const canonicalPage =
+      page === ADMIN_CUSTOMERS_DEFAULTS.page ? null : String(page);
+    if (rawPage !== canonicalPage) changePage(page);
+  }, [changePage, page, rawPage]);
+
+  useEffect(() => {
+    if (!query.data || query.isPlaceholderData) return;
+    const lastValidPage = Math.max(query.data.pagination.totalPages, 1);
+    if (page > lastValidPage) changePage(lastValidPage);
+  }, [changePage, page, query.data, query.isPlaceholderData]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-sm font-semibold text-primary">
+          Customer operations
+        </p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Customers</h1>
+        <p className="mt-2 max-w-2xl text-muted-foreground">
+          Explore customer profiles and review their reservation activity.
+        </p>
+      </div>
+
+      {query.data && (
+        <CustomerSummaryCards summary={query.data.summary} />
+      )}
+      <CustomersFilters
+        key={filters.q}
+        value={filters}
+        pending={isUpdatingResults}
+        hasFilters={hasFilters}
+        onChange={changeFilter}
+        onReset={resetFilters}
+      />
+
+      {query.isError && query.data && (
+        <CustomersErrorState
+          compact
+          message={query.error.message}
+          onRetry={() => query.refetch()}
+        />
+      )}
+
+      {query.isLoading && !query.data ? (
+        <CustomersLoadingSkeleton />
+      ) : query.isError && !query.data ? (
+        <CustomersErrorState
+          message={query.error.message}
+          onRetry={() => query.refetch()}
+        />
+      ) : customers.length === 0 ? (
+        hasFilters || page > 1 ? (
+          <CustomersNoResultsState onReset={resetFilters} />
+        ) : (
+          <CustomersEmptyState />
+        )
+      ) : (
+        <div
+          aria-busy={isUpdatingResults}
+          className={
+            isUpdatingResults ? "opacity-70 transition-opacity" : undefined
+          }
+        >
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {customers.map((customer) => (
+              <CustomerCard key={customer.id} customer={customer} />
+            ))}
+          </div>
+          {query.data && (
+            <CustomersPagination
+              pagination={query.data.pagination}
+              pending={isUpdatingResults}
+              onPageChange={changePage}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

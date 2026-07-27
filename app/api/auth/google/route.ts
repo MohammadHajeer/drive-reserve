@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     if (!claimsError && claimsData?.claims?.sub) {
       const role = claimsData.claims.user_role as UserRole | undefined;
 
-      const destination = role === "admin" ? "/admin" : "/customer";
+      const destination = role === "admin" ? "/admin" : "/profile";
 
       return NextResponse.redirect(new URL(destination, origin));
     }

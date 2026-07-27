@@ -1,2 +1,57 @@
-import { Button } from "@/components/ui/button"; import type { PaginationMeta } from "@/features/admin/customers/admin-customer.types";
-export function CustomersPagination({pagination,onPageChange}:{pagination:PaginationMeta;onPageChange:(page:number)=>void}){return <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-muted-foreground">Showing {(pagination.page-1)*pagination.limit+1}-{Math.min(pagination.page*pagination.limit,pagination.total)} of {pagination.total}</p><div className="flex gap-2"><Button variant="outline" disabled={pagination.page<=1} onClick={()=>onPageChange(pagination.page-1)}>Previous</Button><Button variant="outline" disabled={pagination.page>=pagination.totalPages} onClick={()=>onPageChange(pagination.page+1)}>Next</Button></div></div>}
+"use client";
+
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import type { AdminCustomersPagination } from "@/features/admin/customers/admin-customer.types";
+
+export function CustomersPagination({
+  pagination,
+  pending,
+  onPageChange,
+}: {
+  pagination: AdminCustomersPagination;
+  pending: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  if (!pagination.totalItems) return null;
+  const start = (pagination.page - 1) * pagination.limit + 1;
+  const end = Math.min(
+    pagination.page * pagination.limit,
+    pagination.totalItems,
+  );
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        Showing <strong className="text-foreground">{start}–{end}</strong> of{" "}
+        <strong className="text-foreground">{pagination.totalItems}</strong>{" "}
+        customers
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending || !pagination.hasPreviousPage}
+          onClick={() => onPageChange(pagination.page - 1)}
+        >
+          <ChevronLeft /> Previous
+        </Button>
+        <span
+          aria-current="page"
+          className="grid h-9 min-w-9 place-items-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground"
+        >
+          {pagination.page}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending || !pagination.hasNextPage}
+          onClick={() => onPageChange(pagination.page + 1)}
+        >
+          Next <ChevronRight />
+        </Button>
+      </div>
+    </div>
+  );
+}
