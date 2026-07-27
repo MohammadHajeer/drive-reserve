@@ -7,10 +7,10 @@ import { CarsFilterContent } from "./cars-filter-content";
 
 export function CarsFilters({
   filters,
-  priceRange,
+  priceRangePromise,
 }: {
   filters: PublicCarsFilters;
-  priceRange: PublicCarsPriceRange;
+  priceRangePromise: Promise<PublicCarsPriceRange>;
 }) {
   return (
     <aside
@@ -19,7 +19,7 @@ export function CarsFilters({
     >
       <CarsFilterContent
         filters={filters}
-        priceRange={priceRange}
+        priceRangePromise={priceRangePromise}
         showHeading
       />
     </aside>

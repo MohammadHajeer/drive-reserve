@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, use, useEffect, useRef, useState } from "react";
 import { LoaderCircle, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   PUBLIC_CAR_CATEGORIES,
   PUBLIC_CAR_FUEL_TYPES,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/cars/public-cars";
 import { cn } from "@/lib/utils";
 
-import { useCarsUrl } from "./use-cars-url";
+import { type CarsQueryUpdate, useCarsUrl } from "./use-cars-url";
 
 const categoryLabels: Record<(typeof PUBLIC_CAR_CATEGORIES)[number], string> = {
   economy: "Economy",
@@ -169,11 +170,11 @@ function PriceFilter({
 
 export function CarsFilterContent({
   filters,
-  priceRange,
+  priceRangePromise,
   showHeading = false,
 }: {
   filters: PublicCarsFilters;
-  priceRange: PublicCarsPriceRange;
+  priceRangePromise: Promise<PublicCarsPriceRange>;
   showHeading?: boolean;
 }) {
   const { isPending, replaceQuery } = useCarsUrl();
@@ -183,19 +184,6 @@ export function CarsFilterContent({
     fuel: filters.fuels,
     seats: filters.seatGroups,
   };
-
-  const selectedMaximum = filters.maxPrice ?? priceRange.max;
-  const sliderMinimum = Math.min(priceRange.min, selectedMaximum);
-  const sliderMaximum = Math.max(priceRange.max, selectedMaximum);
-
-  function commitMaximumPrice(nextMaximum: number) {
-    replaceQuery([
-      {
-        name: "maxPrice",
-        values: nextMaximum >= priceRange.max ? [] : [String(nextMaximum)],
-      },
-    ]);
-  }
 
   function clearFilters() {
     replaceQuery(
@@ -241,14 +229,14 @@ export function CarsFilterContent({
           onToggle={toggleFilter}
         />
         <Separator />
-        <PriceFilter
-          minimum={sliderMinimum}
-          maximum={sliderMaximum}
-          selectedMaximum={selectedMaximum}
-          step={priceRange.step}
-          disabled={isPending}
-          onCommit={commitMaximumPrice}
-        />
+        <Suspense fallback={<PriceFilterSkeleton />}>
+          <PriceFilterWithRange
+            filters={filters}
+            priceRangePromise={priceRangePromise}
+            disabled={isPending}
+            replaceQuery={replaceQuery}
+          />
+        </Suspense>
         <Separator />
         <FilterGroup
           title="Transmission"
@@ -287,6 +275,63 @@ export function CarsFilterContent({
         </Button>
       </fieldset>
     </>
+  );
+}
+
+function PriceFilterWithRange({
+  filters,
+  priceRangePromise,
+  disabled,
+  replaceQuery,
+}: {
+  filters: PublicCarsFilters;
+  priceRangePromise: Promise<PublicCarsPriceRange>;
+  disabled: boolean;
+  replaceQuery: (updates: CarsQueryUpdate[], resetPage?: boolean) => void;
+}) {
+  const priceRange = use(priceRangePromise);
+  const selectedMaximum = filters.maxPrice ?? priceRange.max;
+  const sliderMinimum = Math.min(priceRange.min, selectedMaximum);
+  const sliderMaximum = Math.max(priceRange.max, selectedMaximum);
+
+  function commitMaximumPrice(nextMaximum: number) {
+    replaceQuery([
+      {
+        name: "maxPrice",
+        values: nextMaximum >= priceRange.max ? [] : [String(nextMaximum)],
+      },
+    ]);
+  }
+
+  return (
+    <PriceFilter
+      minimum={sliderMinimum}
+      maximum={sliderMaximum}
+      selectedMaximum={selectedMaximum}
+      step={priceRange.step}
+      disabled={disabled}
+      onCommit={commitMaximumPrice}
+    />
+  );
+}
+
+function PriceFilterSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading price filter">
+      <span className="sr-only">Loading price filter</span>
+      <div className="space-y-3" aria-hidden="true">
+        <Skeleton className="h-3 w-24" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+        <Skeleton className="h-2 w-full rounded-full" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="h-3 w-8" />
+        </div>
+      </div>
+    </div>
   );
 }
 

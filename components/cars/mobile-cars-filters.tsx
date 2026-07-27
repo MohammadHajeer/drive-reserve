@@ -31,10 +31,10 @@ function activeFilterCount(filters: PublicCarsFilters) {
 
 export function MobileCarsFilters({
   filters,
-  priceRange,
+  priceRangePromise,
 }: {
   filters: PublicCarsFilters;
-  priceRange: PublicCarsPriceRange;
+  priceRangePromise: Promise<PublicCarsPriceRange>;
 }) {
   const count = activeFilterCount(filters);
 
@@ -59,7 +59,10 @@ export function MobileCarsFilters({
               Refine the available vehicles.
             </SheetDescription>
           </div>
-          <CarsFilterContent filters={filters} priceRange={priceRange} />
+          <CarsFilterContent
+            filters={filters}
+            priceRangePromise={priceRangePromise}
+          />
         </SheetContent>
       </Sheet>
     </div>

@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { Suspense } from "react";
 
 import { CarDetailsTabs } from "@/components/car-details/car-details-tabs";
 import { CarGallery } from "@/components/car-details/car-gallery";
+import { RelatedCarsSkeleton } from "@/components/car-details/car-details-loading-skeletons";
 import { CarSpecs } from "@/components/car-details/car-specs";
 import { ReservationCard } from "@/components/car-details/reservation-card";
+import { CarCard } from "@/components/cars/car-card";
 import { getPublicCarById } from "@/lib/server/cars/get-public-car-by-id";
 import { getRelatedCars } from "@/lib/server/cars/get-related-cars";
 
-type RelatedCarsSuccess = Extract<
-  Awaited<ReturnType<typeof getRelatedCars>>,
+type PublicCar = Extract<
+  Awaited<ReturnType<typeof getPublicCarById>>,
   { success: true }
->;
-import { CarCard } from "@/components/cars/car-card";
+>["data"]["car"];
 
 export default async function CarDetailsPage({
   params,
@@ -21,11 +23,8 @@ export default async function CarDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  
-  
   const result = await getPublicCarById(id);
 
-  
   if (!result.success || !result.data?.car) {
     if (
       result.error?.code === "INVALID_CAR_ID" ||
@@ -39,25 +38,6 @@ export default async function CarDetailsPage({
 
   const { car } = result.data;
   const title = `${car.brand} ${car.model}`;
-
-  
-  let relatedCarsData: RelatedCarsSuccess["data"] = [];
-  try {
-    const relatedResult = await getRelatedCars({
-      id: car.id,
-      category: car.category,
-      transmission: car.transmission,
-      fuelType: car.fuelType,
-      seats: car.seats,
-      pricePerDay: car.pricePerDay,
-    });
-
-    if (relatedResult?.success && Array.isArray(relatedResult.data)) {
-      relatedCarsData = relatedResult.data;
-    }
-  } catch (err) {
-    console.warn("Could not fetch related cars:", err);
-  }
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
@@ -73,7 +53,6 @@ export default async function CarDetailsPage({
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          
           <div className="space-y-6 lg:col-span-7 xl:col-span-8">
             <CarGallery
               images={car.images ? car.images.map((image) => image.url) : []}
@@ -114,22 +93,37 @@ export default async function CarDetailsPage({
         </div>
       </div>
 
-      
-      <div className="mx-auto mt-12 max-w-7xl">
-        {relatedCarsData.length > 0 && (
-          <div>
-            <h2 className="mb-6 text-lg font-semibold text-foreground">
-              Related Cars
-            </h2>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {relatedCarsData.map((relatedCar) => (
-                <CarCard key={relatedCar.id} car={relatedCar} />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <Suspense fallback={<RelatedCarsSkeleton />}>
+        <RelatedCars car={car} />
+      </Suspense>
     </div>
+  );
+}
+
+async function RelatedCars({ car }: { car: PublicCar }) {
+  const result = await getRelatedCars({
+    id: car.id,
+    category: car.category,
+    transmission: car.transmission,
+    fuelType: car.fuelType,
+    seats: car.seats,
+    pricePerDay: car.pricePerDay,
+  });
+
+  if (!result.success || result.data.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="mx-auto mt-12 max-w-7xl">
+      <h2 className="mb-6 text-lg font-semibold text-foreground">
+        Related Cars
+      </h2>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {result.data.map((relatedCar) => (
+          <CarCard key={relatedCar.id} car={relatedCar} />
+        ))}
+      </div>
+    </section>
   );
 }

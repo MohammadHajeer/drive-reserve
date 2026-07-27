@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { Suspense } from "react";
 
 import { ReservationCard } from "@/components/car-details/reservation-card";
+import { ConfirmationPageSkeleton } from "@/components/reservation/confirmation-loading-skeleton";
 import { ConfirmReservationContent } from "@/components/reservation/confirm-reservation-content";
 import { getPublicCarById } from "@/lib/server/cars/get-public-car-by-id";
 import {
   previewReservation,
   ReservationPreviewValidationError,
-  type ReservationPreview,
 } from "@/lib/server/reservations/preview-reservation";
 import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
@@ -115,7 +116,41 @@ export default async function ConfirmReservationPage({
   searchParams: Promise<SearchParams>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const carResult = await getPublicCarById(id);
+  const contentKey = `${id}:${String(query.pickup ?? "")}:${String(query.return ?? "")}`;
+
+  return (
+    <Suspense key={contentKey} fallback={<ConfirmationPageSkeleton />}>
+      <ConfirmationPageContent id={id} query={query} />
+    </Suspense>
+  );
+}
+
+async function ConfirmationPageContent({
+  id,
+  query,
+}: {
+  id: string;
+  query: SearchParams;
+}) {
+  const parsedDates = reservationPreviewSchema.safeParse({
+    carId: id,
+    pickupDate: query.pickup,
+    returnDate: query.return,
+  });
+  const carPromise = getPublicCarById(id);
+
+  const [carOutcome, previewOutcome] = await Promise.allSettled([
+    carPromise,
+    parsedDates.success
+      ? previewReservation(parsedDates.data)
+      : Promise.resolve(null),
+  ]);
+
+  if (carOutcome.status === "rejected") {
+    throw carOutcome.reason;
+  }
+
+  const carResult = carOutcome.value;
 
   if (!carResult.success) {
     if (
@@ -129,11 +164,6 @@ export default async function ConfirmReservationPage({
   }
 
   const { car } = carResult.data;
-  const parsedDates = reservationPreviewSchema.safeParse({
-    carId: car.id,
-    pickupDate: query.pickup,
-    returnDate: query.return,
-  });
 
   if (!parsedDates.success) {
     return (
@@ -144,16 +174,20 @@ export default async function ConfirmReservationPage({
     );
   }
 
-  let preview: ReservationPreview;
+  if (previewOutcome.status === "rejected") {
+    const error = previewOutcome.reason;
 
-  try {
-    preview = await previewReservation(parsedDates.data);
-  } catch (error) {
     if (error instanceof ReservationPreviewValidationError) {
       return <ReservationDateIssue car={car} message={error.message} />;
     }
 
     throw error;
+  }
+
+  const preview = previewOutcome.value;
+
+  if (!preview) {
+    throw new Error("The reservation preview returned no data.");
   }
 
   if (preview.unavailableReason === "CAR_NOT_FOUND") {

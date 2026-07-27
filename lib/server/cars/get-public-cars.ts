@@ -11,6 +11,7 @@ import {
   PUBLIC_CAR_TRANSMISSIONS,
   PUBLIC_CAR_VIEWS,
   type PublicCarsFilters,
+  type PublicCarsPriceRange,
   type PublicCarsSearchParams,
 } from "@/lib/cars/public-cars";
 import { createClient } from "@/lib/supabase/server";
@@ -145,9 +146,60 @@ export function normalizePublicCarsFilters(
   });
 }
 
+async function queryPublicCarsPriceRange(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<PublicCarsPriceRange> {
+  const [lowestPriceResult, highestPriceResult] = await Promise.all([
+    supabase
+      .from("cars")
+      .select("price_per_day")
+      .eq("status", "available")
+      .order("price_per_day", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("cars")
+      .select("price_per_day")
+      .eq("status", "available")
+      .order("price_per_day", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (lowestPriceResult.error || highestPriceResult.error) {
+    console.error(
+      "Cars price range error:",
+      lowestPriceResult.error ?? highestPriceResult.error,
+    );
+  }
+
+  const priceStep = 5;
+  const rawMinimum = Number(lowestPriceResult.data?.price_per_day ?? 0);
+  const rawMaximum = Number(highestPriceResult.data?.price_per_day ?? 0);
+
+  return {
+    min: Math.max(0, Math.floor(rawMinimum / priceStep) * priceStep),
+    max: Math.max(priceStep, Math.ceil(rawMaximum / priceStep) * priceStep),
+    step: priceStep,
+  };
+}
+
+export async function getPublicCarsPriceRange() {
+  try {
+    const supabase = await createClient();
+    return await queryPublicCarsPriceRange(supabase);
+  } catch (error) {
+    console.error("Cars price range load error:", error);
+    return { min: 0, max: 5, step: 5 } satisfies PublicCarsPriceRange;
+  }
+}
+
 export async function getPublicCars(
   filters: PublicCarsFilters,
-  options: { limit?: number } = {},
+  options: {
+    limit?: number;
+    priceRange?: PublicCarsPriceRange | Promise<PublicCarsPriceRange>;
+  } = {},
 ) {
   try {
     const validatedFilters = filtersSchema.parse(filters);
@@ -240,27 +292,13 @@ export async function getPublicCars(
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const [carsResult, lowestPriceResult, highestPriceResult] =
-      await Promise.all([
-        query
-          .order(sortOption.column, { ascending: sortOption.ascending })
-          .order("id", { ascending: true })
-          .range(from, to),
-        supabase
-          .from("cars")
-          .select("price_per_day")
-          .eq("status", "available")
-          .order("price_per_day", { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("cars")
-          .select("price_per_day")
-          .eq("status", "available")
-          .order("price_per_day", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
+    const [carsResult, priceRange] = await Promise.all([
+      query
+        .order(sortOption.column, { ascending: sortOption.ascending })
+        .order("id", { ascending: true })
+        .range(from, to),
+      options.priceRange ?? queryPublicCarsPriceRange(supabase),
+    ]);
 
     const { data, count, error } = carsResult;
     if (error) {
@@ -272,13 +310,6 @@ export async function getPublicCars(
           message: "Unable to load the available cars.",
         },
       };
-    }
-
-    if (lowestPriceResult.error || highestPriceResult.error) {
-      console.error(
-        "Cars price range error:",
-        lowestPriceResult.error ?? highestPriceResult.error,
-      );
     }
 
     const cars = (data ?? []).map((car) => {
@@ -311,10 +342,6 @@ export async function getPublicCars(
     });
 
     const total = count ?? 0;
-    const priceStep = 5;
-    const rawMinimum = Number(lowestPriceResult.data?.price_per_day ?? 0);
-    const rawMaximum = Number(highestPriceResult.data?.price_per_day ?? 0);
-
     return {
       success: true as const,
       data: {
@@ -327,14 +354,7 @@ export async function getPublicCars(
           hasNextPage: page * limit < total,
           hasPreviousPage: page > 1,
         },
-        priceRange: {
-          min: Math.max(0, Math.floor(rawMinimum / priceStep) * priceStep),
-          max: Math.max(
-            priceStep,
-            Math.ceil(rawMaximum / priceStep) * priceStep,
-          ),
-          step: priceStep,
-        },
+        priceRange,
       },
     };
   } catch (error) {

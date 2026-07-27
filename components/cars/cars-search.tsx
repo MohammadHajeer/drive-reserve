@@ -17,7 +17,7 @@ export function CarsSearch({
   mobileFilters,
 }: {
   q: string;
-  total: number;
+  total: ReactNode;
   mobileFilters: ReactNode;
 }) {
   const [searchValue, setSearchValue] = useState(q);
@@ -71,7 +71,7 @@ export function CarsSearch({
       </div>
       {mobileFilters}
       <p className="shrink-0 text-xs text-muted-foreground" aria-live="polite">
-        {total} {total === 1 ? "vehicle" : "vehicles"}
+        {total}
       </p>
     </div>
   );
