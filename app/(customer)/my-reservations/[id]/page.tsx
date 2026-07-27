@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useCustomerReservations } from "@/features/customer/reservations/hooks/use-customer-reservations";
 
-// Import modular components
+
 import { ReservationHeader } from "@/components/reservation/details/reservation-header";
 import { ReservationSummary } from "@/components/reservation/details/reservation-summary";
 import { ReservationProgress } from "@/components/reservation/details/reservation-progress";
@@ -59,16 +59,16 @@ export default function ReservationDetailsPage() {
         </Link>
       </div>
 
-      {/* 1. Header with Status Badge & Actions */}
+      
       <ReservationHeader reservation={reservation} />
 
-      {/* 2. Top Summary Cards (Booking ID, Total Amount, Rental Period, Customer) */}
+      
       <ReservationSummary reservation={reservation} />
 
-      {/* 3. Booking Progress Timeline Bar right below summary */}
+      
       <ReservationProgress reservation={reservation} />
 
-      {/* 4. Main Content Grid */}
+     
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <ReservationVehicleCard car={reservation.car} />

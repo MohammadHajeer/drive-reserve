@@ -16,7 +16,7 @@ export function ReservationVehicleCard({ car }: { car: CustomerReservation["car"
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="relative w-full md:w-56 h-36 rounded-lg overflow-hidden bg-muted shrink-0">
           {car.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+           
             <img
               src={car.imageUrl}
               alt={car.name}

@@ -26,7 +26,7 @@ export function CarSummaryCard({
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="relative w-full md:w-56 h-36 rounded-lg overflow-hidden bg-muted shrink-0">
           {imageSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            
             <img src={imageSrc} alt={name} className="object-cover" />
           ) : (
             <div className="flex size-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
