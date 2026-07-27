@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(loginErrorUrl);
     }
 
-    const destination = profile.role === "admin" ? "/admin" : "/customer";
+    const destination = profile.role === "admin" ? "/admin" : "/profile";
 
     return NextResponse.redirect(new URL(destination, url.origin));
   } catch (error) {
