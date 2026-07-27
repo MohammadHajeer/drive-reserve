@@ -53,7 +53,10 @@ export default function RootLayout({
         geistMono.variable,
       )}
     >
-      <body className="flex min-h-svh flex-col bg-background text-foreground">
+      <body
+        className="flex min-h-svh flex-col bg-background text-foreground"
+        suppressHydrationWarning
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

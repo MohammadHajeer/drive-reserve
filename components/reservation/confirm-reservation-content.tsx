@@ -3,11 +3,11 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-
-import { CarSummaryCard } from "./car-summary-card";
+import { CarSummaryCard } from "@/components/reservation/car-summary-card";
+import { ReservationItineraryCard } from "@/components/reservation/details/reservation-itinerary-card";
 import { FareSummaryCard } from "./fare-summary-card";
 import { PaymentMethodSelector } from "./payment-method-selector";
 
@@ -70,18 +70,14 @@ export function ConfirmReservationContent({
   const router = useRouter();
   const submissionInProgress = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "onsite">(
-    "card",
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "onsite">("card");
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const searchParams = new URLSearchParams({
     pickup: pickupDate,
     return: returnDate,
   });
-  const carDetailsPath = `/cars/${encodeURIComponent(
-    car.id,
-  )}?${searchParams.toString()}`;
+  const carDetailsPath = `/cars/${encodeURIComponent(car.id)}?${searchParams.toString()}`;
 
   const primaryImage =
     car.images.find((image) => image.isPrimary) ?? car.images[0];
@@ -93,23 +89,6 @@ export function ConfirmReservationContent({
 
     if (!agreeToTerms) {
       toast.error("Please agree to the rental terms before confirming.");
-      return;
-    }
-
-    const parsedDates = reservationPreviewSchema.safeParse({
-      carId: car.id,
-      pickupDate,
-      returnDate,
-    });
-
-    if (!parsedDates.success) {
-      const fieldErrors = parsedDates.error.flatten().fieldErrors;
-      const message =
-        fieldErrors.pickupDate?.[0] ??
-        fieldErrors.returnDate?.[0] ??
-        "Choose a valid pickup and return date range.";
-
-      toast.error(message);
       return;
     }
 
@@ -140,7 +119,7 @@ export function ConfirmReservationContent({
       if (!response.ok || !isSuccessfulResponse(payload)) {
         toast.error(
           readApiErrorMessage(payload) ??
-            "Unable to submit the reservation. Please try again.",
+            "Unable to submit the reservation. Please try again."
         );
         return;
       }
@@ -155,6 +134,11 @@ export function ConfirmReservationContent({
       setIsSubmitting(false);
     }
   }
+
+  const reservationMock = {
+    pickupDate,
+    returnDate,
+  } as any;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -180,66 +164,7 @@ export function ConfirmReservationContent({
             year={car.year}
           />
 
-          <div className="bg-card text-card-foreground rounded-xl border p-6 shadow-sm space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
-                Itinerary & Location
-              </h3>
-              <Link
-                href={carDetailsPath}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                Edit
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-muted/20 p-4 rounded-lg border">
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <span className="text-xs text-muted-foreground font-semibold uppercase">
-                    Pick-Up
-                  </span>
-                  <p className="font-semibold text-foreground">
-                    {pickupDate} at 10:00 AM
-                  </p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Downtown Mobility Hub, Block A</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <span className="text-xs text-muted-foreground font-semibold uppercase">
-                    Return
-                  </span>
-                  <p className="font-semibold text-foreground">
-                    {returnDate} at 10:00 AM
-                  </p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Downtown Mobility Hub, Block A</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative w-full h-60 rounded-lg overflow-hidden border shadow-inner bg-slate-100">
-              <iframe
-                title="Downtown Location Map"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                loading="lazy"
-                allowFullScreen
-                src="https://maps.google.com/maps?q=Downtown%20Beirut%20Central%20District&t=&z=15&ie=UTF8&iwloc=B&output=embed"
-              />
-            </div>
-          </div>
+          <ReservationItineraryCard reservation={reservationMock} />
 
           <PaymentMethodSelector
             paymentMethod={paymentMethod}

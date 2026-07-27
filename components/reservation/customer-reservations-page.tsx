@@ -229,46 +229,48 @@ export function CustomerReservationsPage() {
 
 function ReservationCard({ reservation }: { reservation: CustomerReservation }) {
   return (
-    <Card size="sm">
-      <CardContent className="grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:items-center">
-        <div className="relative flex h-60 items-center justify-center overflow-hidden rounded-2xl bg-muted sm:h-16">
-          {reservation.car.imageUrl ? (
-            <Image
-              src={reservation.car.imageUrl}
-              alt={reservation.car.name}
-              fill
-              sizes="96px"
-              className="object-cover"
-            />
-          ) : (
-            <CarFront className="size-7 text-muted-foreground" aria-hidden="true" />
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{reservation.car.name}</p>
-            <ReservationStatusBadge status={reservation.status} />
+    <Link href={`/my-reservations/${reservation.id}`} className="block group">
+      <Card size="sm" className="transition-all duration-200 group-hover:border-primary/50 group-hover:shadow-md">
+        <CardContent className="grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:items-center">
+          <div className="relative flex h-60 items-center justify-center overflow-hidden rounded-2xl bg-muted sm:h-16">
+            {reservation.car.imageUrl ? (
+              <Image
+                src={reservation.car.imageUrl}
+                alt={reservation.car.name}
+                fill
+                sizes="96px"
+                className="object-cover"
+              />
+            ) : (
+              <CarFront className="size-7 text-muted-foreground" aria-hidden="true" />
+            )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {reservation.car.category
-              ? capitalize(reservation.car.category)
-              : "Rental vehicle"} · Reservation {reservation.id.slice(0, 8).toUpperCase()}
-          </p>
-          <p className="mt-2 flex items-center gap-1.5 text-sm">
-            <CalendarDays className="size-4 text-muted-foreground" aria-hidden="true" />
-            {formatDate(reservation.pickupDate)} – {formatDate(reservation.returnDate)}
-            <span className="text-muted-foreground">
-              ({reservation.rentalDays} {reservation.rentalDays === 1 ? "day" : "days"})
-            </span>
-          </p>
-        </div>
 
-        <p className="text-lg font-bold tabular-nums sm:text-right">
-          {priceFormatter.format(reservation.totalPrice)}
-        </p>
-      </CardContent>
-    </Card>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold group-hover:text-primary transition-colors">{reservation.car.name}</p>
+              <ReservationStatusBadge status={reservation.status} />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {reservation.car.category
+                ? capitalize(reservation.car.category)
+                : "Rental vehicle"} · Reservation {reservation.id.slice(0, 8).toUpperCase()}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-sm">
+              <CalendarDays className="size-4 text-muted-foreground" aria-hidden="true" />
+              {formatDate(reservation.pickupDate)} – {formatDate(reservation.returnDate)}
+              <span className="text-muted-foreground">
+                ({reservation.rentalDays} {reservation.rentalDays === 1 ? "day" : "days"})
+              </span>
+            </p>
+          </div>
+
+          <p className="text-lg font-bold tabular-nums sm:text-right">
+            {priceFormatter.format(reservation.totalPrice)}
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
