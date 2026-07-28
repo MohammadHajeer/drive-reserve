@@ -2,8 +2,6 @@
 
 import {
   Ban,
-  CalendarDays,
-  CheckCircle2,
   LoaderCircle,
   RotateCw,
   ShieldCheck,
@@ -13,10 +11,7 @@ import { Button } from "@/components/ui/button";
 import type { Car } from "@/types/domain";
 
 import { ReservationCalendar } from "./reservation-calendar";
-import {
-  MAX_RENTAL_DAYS,
-  useReservationCard,
-} from "./use-reservation-card";
+import { useReservationCard } from "./use-reservation-card";
 import {
   formatPreviewDate,
   getUnavailableMessage,
@@ -61,15 +56,8 @@ export function ReservationCard({
       data-car-id={carId}
     >
       <header>
-        <p className="text-sm font-semibold text-foreground">
-          Plan your rental
-        </p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Choose your pickup and return dates to check availability and
-          calculate the estimated price.
-        </p>
-
-        <div className="mt-4 flex items-baseline gap-1">
+        <p className="text-sm font-semibold text-foreground">Reserve this car</p>
+        <div className="mt-2 flex items-baseline gap-1">
           <span className="text-3xl font-bold tracking-tight text-foreground">
             {currencyFormatter.format(displayedPricePerDay)}
           </span>
@@ -79,65 +67,13 @@ export function ReservationCard({
         </div>
       </header>
 
-      {!hasCompleteRange ? (
-        <div className="mt-5 rounded-xl border border-primary/15 bg-primary/5 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <CalendarDays className="size-4" aria-hidden="true" />
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Choose your rental dates
-              </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Select a complete date range to see current availability and
-                your estimated total.
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Maximum rental period: {MAX_RENTAL_DAYS} days.
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {hasCompleteRange && previewState.status === "loading" ? (
-        <div className="mt-5 flex items-center gap-3 rounded-xl border bg-muted/40 p-4">
+        <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           <LoaderCircle
-            className="size-5 shrink-0 animate-spin text-primary"
+            className="size-4 shrink-0 animate-spin text-primary motion-reduce:animate-none"
             aria-hidden="true"
           />
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Checking availability
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              We are validating the selected dates and calculating the price.
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      {hasCompleteRange &&
-      previewState.status === "success" &&
-      previewState.preview.available ? (
-        <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <div className="flex items-start gap-3">
-            <CheckCircle2
-              className="mt-0.5 size-5 shrink-0 text-emerald-600"
-              aria-hidden="true"
-            />
-            <div>
-              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                Available for your trip
-              </p>
-              <p className="mt-1 text-xs leading-5 text-emerald-700 dark:text-emerald-400">
-                These dates are currently available. Review the estimated
-                price before continuing.
-              </p>
-            </div>
-          </div>
+          Checking availability and price…
         </div>
       ) : null}
 

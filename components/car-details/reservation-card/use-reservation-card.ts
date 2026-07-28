@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { addMonths, endOfMonth, startOfMonth } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  endOfMonth,
+  isBefore,
+  isSameDay,
+  startOfMonth,
+} from "date-fns";
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
@@ -15,22 +22,33 @@ import {
   getEarliestPickupDateOnly,
 } from "@/lib/reservations/reservation-date";
 import {
+  MAX_BOOKING_HORIZON_DAYS,
   MAX_RENTAL_DAYS,
   reservationPreviewSchema,
   type ReservationPreviewInput,
 } from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
 
+import {
+  canUseAsPickupDate,
+  getOneDayReturnBoundary,
+  getRentalDays,
+  getRentalRangeError,
+} from "./reservation-calendar.utils";
+import type { CalendarLoadState } from "./reservation-calendar.types";
 import { formatDateOnly, parseDateOnly } from "./reservation-card.utils";
 
 const DESKTOP_CALENDAR_QUERY = "(min-width: 768px)";
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
 
 function getReservationDateError(input: ReservationPreviewInput): string | null {
   const parsed = reservationPreviewSchema.safeParse(input);
 
-  if (parsed.success) {
-    return null;
-  }
+  if (parsed.success) return null;
 
   const fieldErrors = parsed.error.flatten().fieldErrors;
 
@@ -40,13 +58,6 @@ function getReservationDateError(input: ReservationPreviewInput): string | null 
     "Choose a valid pickup and return date range."
   );
 }
-
-export { MAX_RENTAL_DAYS } from "@/lib/validations/reservation.validation";
-
-type CalendarLoadState =
-  | { status: "loading" }
-  | { status: "success" }
-  | { status: "error"; message: string };
 
 type PreviewState =
   | { status: "idle" }
@@ -77,12 +88,20 @@ export function useReservationCard({
     () => parseDateOnly(addDaysToDateOnly(beirutToday, 1)) ?? new Date(),
     [beirutToday],
   );
+  const latestPickupDate = useMemo(
+    () =>
+      parseDateOnly(
+        addDaysToDateOnly(beirutToday, MAX_BOOKING_HORIZON_DAYS),
+      ) ?? new Date(),
+    [beirutToday],
+  );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [displayedMonth, setDisplayedMonth] = useState(() =>
     startOfMonth(parseDateOnly(getEarliestPickupDateOnly()) ?? new Date()),
   );
-  const [numberOfMonths, setNumberOfMonths] = useState(1);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [selectedRange, setSelectedRange] = useState<DateRange>();
+  const [selectionError, setSelectionError] = useState<string | null>(null);
 
   useReservationRealtime(carId);
 
@@ -96,21 +115,19 @@ export function useReservationCard({
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_CALENDAR_QUERY);
-    const updateNumberOfMonths = () => {
-      setNumberOfMonths(mediaQuery.matches ? 2 : 1);
-    };
+    const updateCalendarMode = () => setIsDesktop(mediaQuery.matches);
 
-    updateNumberOfMonths();
-    mediaQuery.addEventListener("change", updateNumberOfMonths);
+    updateCalendarMode();
+    mediaQuery.addEventListener("change", updateCalendarMode);
 
-    return () => {
-      mediaQuery.removeEventListener("change", updateNumberOfMonths);
-    };
+    return () => mediaQuery.removeEventListener("change", updateCalendarMode);
   }, []);
 
+  const numberOfMonths = isDesktop ? 2 : 1;
   const unavailableRangesInput = useMemo(() => {
     const from = startOfMonth(displayedMonth);
-    const to = endOfMonth(addMonths(from, numberOfMonths - 1));
+    const lastVisibleMonth = addMonths(from, numberOfMonths - 1);
+    const to = addDays(endOfMonth(lastVisibleMonth), MAX_RENTAL_DAYS);
 
     return {
       carId,
@@ -125,15 +142,197 @@ export function useReservationCard({
     () => unavailableRangesQuery.data ?? [],
     [unavailableRangesQuery.data],
   );
+  const allUnavailableRanges = useMemo(
+    () => unavailableRanges.map(({ from, to }) => ({ from, to })),
+    [unavailableRanges],
+  );
 
-  const loadState: CalendarLoadState = unavailableRangesQuery.data
-    ? { status: "success" }
-    : unavailableRangesQuery.isError
-      ? {
-          status: "error",
-          message: unavailableRangesQuery.error.message,
+  const carIsGenerallyAvailable = status === "available";
+  const calendarIsUnavailable =
+    unavailableRangesQuery.data === undefined ||
+    unavailableRangesQuery.isError ||
+    !carIsGenerallyAvailable;
+  const loadState: CalendarLoadState =
+    unavailableRangesQuery.data !== undefined
+      ? { status: "success" }
+      : unavailableRangesQuery.isError
+        ? {
+            status: "error",
+            message: unavailableRangesQuery.error.message,
+          }
+        : { status: "loading" };
+
+  const handleRangeSelect = useCallback(
+    (_range: DateRange | undefined, triggerDate: Date) => {
+      if (calendarIsUnavailable) {
+        setSelectionError("Availability must finish loading before selection.");
+        return;
+      }
+
+      setSelectionError(null);
+      const pickup = selectedRange?.from;
+
+      if (!pickup || selectedRange.to) {
+        if (
+          !canUseAsPickupDate(
+            triggerDate,
+            earliestPickupDate,
+            latestPickupDate,
+            allUnavailableRanges,
+          )
+        ) {
+          setSelectionError("This date is unavailable.");
+          return;
         }
-      : { status: "loading" };
+
+        setSelectedRange({ from: triggerDate, to: undefined });
+        return;
+      }
+
+      if (isBefore(triggerDate, pickup) && !isSameDay(triggerDate, pickup)) {
+        if (
+          canUseAsPickupDate(
+            triggerDate,
+            earliestPickupDate,
+            latestPickupDate,
+            allUnavailableRanges,
+          )
+        ) {
+          setSelectedRange({ from: triggerDate, to: undefined });
+        } else {
+          setSelectionError("This date is unavailable.");
+        }
+        return;
+      }
+
+      const returnBoundary = isSameDay(triggerDate, pickup)
+        ? getOneDayReturnBoundary(pickup)
+        : triggerDate;
+      const error = getRentalRangeError(
+        pickup,
+        returnBoundary,
+        allUnavailableRanges,
+        MAX_RENTAL_DAYS,
+      );
+
+      if (error) {
+        setSelectionError(error);
+        return;
+      }
+
+      setSelectedRange({ from: pickup, to: returnBoundary });
+    },
+    [
+      allUnavailableRanges,
+      calendarIsUnavailable,
+      earliestPickupDate,
+      latestPickupDate,
+      selectedRange,
+    ],
+  );
+
+  const isDateDisabled = useCallback(
+    (date: Date) => {
+      if (calendarIsUnavailable) return true;
+
+      const pickup = selectedRange?.from;
+
+      if (!pickup || selectedRange.to) {
+        return !canUseAsPickupDate(
+          date,
+          earliestPickupDate,
+          latestPickupDate,
+          allUnavailableRanges,
+        );
+      }
+
+      if (isBefore(date, pickup) && !isSameDay(date, pickup)) {
+        return !canUseAsPickupDate(
+          date,
+          earliestPickupDate,
+          latestPickupDate,
+          allUnavailableRanges,
+        );
+      }
+
+      const returnBoundary = isSameDay(date, pickup)
+        ? getOneDayReturnBoundary(pickup)
+        : date;
+
+      return (
+        getRentalRangeError(
+          pickup,
+          returnBoundary,
+          allUnavailableRanges,
+          MAX_RENTAL_DAYS,
+        ) !== null
+      );
+    },
+    [
+      allUnavailableRanges,
+      calendarIsUnavailable,
+      earliestPickupDate,
+      latestPickupDate,
+      selectedRange,
+    ],
+  );
+
+  const pendingOneDayReturn = selectedRange?.from
+    ? getOneDayReturnBoundary(selectedRange.from)
+    : null;
+  const canDone =
+    loadState.status === "success" &&
+    selectedRange?.from !== undefined &&
+    (selectedRange.to
+      ? getRentalRangeError(
+          selectedRange.from,
+          selectedRange.to,
+          allUnavailableRanges,
+          MAX_RENTAL_DAYS,
+        ) === null
+      : pendingOneDayReturn !== null &&
+        getRentalRangeError(
+          selectedRange.from,
+          pendingOneDayReturn,
+          allUnavailableRanges,
+          MAX_RENTAL_DAYS,
+        ) === null);
+
+  const handleDone = useCallback(() => {
+    if (!selectedRange?.from || !canDone) return;
+
+    if (!selectedRange.to) {
+      setSelectedRange({
+        from: selectedRange.from,
+        to: getOneDayReturnBoundary(selectedRange.from),
+      });
+    }
+
+    setSelectionError(null);
+    setCalendarOpen(false);
+  }, [canDone, selectedRange]);
+
+  const handleClear = useCallback(() => {
+    setSelectedRange(undefined);
+    setSelectionError(null);
+  }, []);
+
+  const rangeAvailabilityError = useMemo(() => {
+    if (
+      loadState.status !== "success" ||
+      !selectedRange?.from ||
+      !selectedRange.to
+    ) {
+      return null;
+    }
+
+    return getRentalRangeError(
+      selectedRange.from,
+      selectedRange.to,
+      allUnavailableRanges,
+      MAX_RENTAL_DAYS,
+    );
+  }, [allUnavailableRanges, loadState.status, selectedRange]);
 
   const pickupDate = selectedRange?.from
     ? formatDateOnly(selectedRange.from)
@@ -151,9 +350,7 @@ export function useReservationCard({
   const dateError = previewInput
     ? getReservationDateError(previewInput)
     : null;
-  const previewQuery = useReservationPreview(
-    dateError ? null : previewInput,
-  );
+  const previewQuery = useReservationPreview(dateError ? null : previewInput);
   const refetchReservationPreview = previewQuery.refetch;
 
   const previewState = useMemo<PreviewState>(
@@ -180,14 +377,6 @@ export function useReservationCard({
     void refetchReservationPreview();
   }, [refetchReservationPreview]);
 
-  const handleRangeSelect = useCallback((range: DateRange | undefined) => {
-    setSelectedRange(range);
-
-    if (range?.from && range.to) {
-      setCalendarOpen(false);
-    }
-  }, []);
-
   const availablePreview =
     previewState.status === "success" && previewState.preview.available
       ? previewState.preview
@@ -196,7 +385,6 @@ export function useReservationCard({
   const hasPickupDate = selectedRange?.from !== undefined;
   const hasReturnDate = selectedRange?.to !== undefined;
   const hasCompleteRange = pickupDate !== null && returnDate !== null;
-  const carIsGenerallyAvailable = status === "available";
 
   const primaryAction = useMemo(() => {
     const action = (
@@ -215,43 +403,32 @@ export function useReservationCard({
         disabled: true,
       });
     }
-
-    if (!hasPickupDate) {
-      return action("open-calendar", "Choose rental dates");
-    }
-
-    if (!hasReturnDate) {
-      return action("open-calendar", "Select a return date");
-    }
-
+    if (!hasPickupDate) return action("open-calendar", "Choose rental dates");
+    if (!hasReturnDate) return action("open-calendar", "Finish choosing dates");
     if (previewQuery.isFetching) {
       return action("disabled", "Checking availability…", {
         disabled: true,
         loading: true,
       });
     }
-
     if (previewState.status === "error") {
       return action("retry-preview", "Try availability check again");
     }
-
-    if (
-      previewState.status === "success" &&
-      !previewState.preview.available
-    ) {
+    if (previewState.status === "success" && !previewState.preview.available) {
       return action("open-calendar", "Choose different dates");
     }
-
     if (
       previewState.status === "success" &&
-      previewState.preview.available
+      previewState.preview.available &&
+      previewState.preview.totalPrice !== null
     ) {
-      return action("continue", "Continue to confirmation");
+      return action(
+        "continue",
+        `Continue — ${currencyFormatter.format(previewState.preview.totalPrice)} total`,
+      );
     }
 
-    return action("disabled", "Checking selected dates…", {
-      disabled: true,
-    });
+    return action("disabled", "Checking selected dates…", { disabled: true });
   }, [
     carIsGenerallyAvailable,
     hasPickupDate,
@@ -265,15 +442,11 @@ export function useReservationCard({
       case "open-calendar":
         setCalendarOpen(true);
         return;
-
       case "retry-preview":
         retryReservationPreview();
         return;
-
       case "continue": {
-        if (!pickupDate || !returnDate || previewQuery.isFetching) {
-          return;
-        }
+        if (!pickupDate || !returnDate || previewQuery.isFetching) return;
 
         const validationError = getReservationDateError({
           carId,
@@ -282,6 +455,7 @@ export function useReservationCard({
         });
 
         if (validationError) {
+          setSelectionError(validationError);
           setCalendarOpen(true);
           return;
         }
@@ -295,7 +469,6 @@ export function useReservationCard({
         );
         return;
       }
-
       case "disabled":
         return;
     }
@@ -309,10 +482,6 @@ export function useReservationCard({
     router,
   ]);
 
-  const allUnavailableRanges = useMemo(
-    () => unavailableRanges.map(({ from, to }) => ({ from, to })),
-    [unavailableRanges],
-  );
   const myReservationRanges = useMemo(
     () =>
       unavailableRanges
@@ -333,6 +502,32 @@ export function useReservationCard({
         })),
     [earliestPickupDate, unavailableRanges],
   );
+  const returnBoundaryDates = useMemo(() => {
+    if (!selectedRange?.from || selectedRange.to) return [];
+
+    return allUnavailableRanges
+      .map((range) => range.from)
+      .filter(
+        (date) =>
+          getRentalRangeError(
+            selectedRange.from!,
+            date,
+            allUnavailableRanges,
+            MAX_RENTAL_DAYS,
+          ) === null,
+      );
+  }, [allUnavailableRanges, selectedRange]);
+  const calendarSelectedRange = useMemo<DateRange | undefined>(() => {
+    if (!selectedRange?.from || !selectedRange.to) return selectedRange;
+
+    return getRentalDays(selectedRange.from, selectedRange.to) === 1
+      ? { from: selectedRange.from, to: selectedRange.from }
+      : selectedRange;
+  }, [selectedRange]);
+  const previewSelectionError =
+    previewState.status === "success" && !previewState.preview.available
+      ? "Your rental cannot include reserved dates."
+      : null;
 
   return {
     hasCompleteRange,
@@ -347,23 +542,27 @@ export function useReservationCard({
       onOpenChange: setCalendarOpen,
       displayedMonth,
       onMonthChange: setDisplayedMonth,
-      numberOfMonths,
+      isDesktop,
       selectedRange,
+      calendarSelectedRange,
       onRangeSelect: handleRangeSelect,
       earliestPickupDate,
+      latestPickupDate,
       loadState,
       onRetryUnavailableRanges: () => {
         void unavailableRangesQuery.refetch();
       },
-      calendarIsUnavailable:
-        unavailableRangesQuery.data === undefined ||
-        unavailableRangesQuery.isError ||
-        !carIsGenerallyAvailable,
+      isDateDisabled,
       allUnavailableRanges,
       myReservationRanges,
       otherReservationRanges,
-      hasMyReservations: myReservationRanges.length > 0,
+      returnBoundaryDates,
       maxRentalDays: MAX_RENTAL_DAYS,
+      selectionError:
+        selectionError ?? rangeAvailabilityError ?? previewSelectionError,
+      onClear: handleClear,
+      onDone: handleDone,
+      canDone,
     },
   };
 }
