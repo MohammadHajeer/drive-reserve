@@ -31,20 +31,12 @@ export function Footer() {
 
           <div className="mt-6 flex gap-3">
             {[
-              {
-                href: "https://drivereserve.com",
-                label: "Website",
-                icon: Globe,
-              },
-              {
-                href: "/about",
-                label: "About",
-                icon: BadgeInfo,
-              },
-            ].map(({ href, label, icon: Icon }) => (
+              { label: "Website", icon: Globe },
+              { label: "About", icon: BadgeInfo },
+            ].map(({ label, icon: Icon }) => (
               <Link
                 key={label}
-                href={href}
+                href="#"
                 aria-label={label}
                 className="flex size-10 items-center justify-center rounded-full border border-white/10 text-slate-400 transition hover:border-primary hover:bg-primary hover:text-white"
               >
