@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 
 import { CarSummaryCard } from "@/components/reservation/car-summary-card";
 import { ReservationItineraryCard } from "@/components/reservation/details/reservation-itinerary-card";
+import { useReservationPreview } from "@/features/reservations/hooks/use-reservation-preview";
+import { useReservationRealtime } from "@/features/reservations/hooks/use-reservation-realtime";
 import { reservationPreviewSchema } from "@/lib/validations/reservation.validation";
 import { FareSummaryCard } from "./fare-summary-card";
 
@@ -78,6 +80,30 @@ export function ConfirmReservationContent({
   const submissionInProgress = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const previewInput = useMemo(
+    () => ({ carId: car.id, pickupDate, returnDate }),
+    [car.id, pickupDate, returnDate],
+  );
+  const previewQuery = useReservationPreview(previewInput);
+
+  useReservationRealtime(car.id);
+
+  const currentPreview = previewQuery.data;
+  const availabilityMessage = previewQuery.isFetching
+    ? "Rechecking current availability…"
+    : previewQuery.isError
+      ? previewQuery.error.message
+      : currentPreview && !currentPreview.available
+        ? "Those dates are no longer available. Choose a different pickup and return range before confirming."
+        : null;
+  const availabilityIsInvalid =
+    previewQuery.isFetching ||
+    previewQuery.isError ||
+    !currentPreview?.available;
+  const currentRentalDays = currentPreview?.rentalDays ?? rentalDays;
+  const currentPricePerDay =
+    currentPreview?.pricePerDay ?? pricePerDay;
+  const currentTotalPrice = currentPreview?.totalPrice ?? totalPrice;
 
   const searchParams = new URLSearchParams({
     pickup: pickupDate,
@@ -92,6 +118,25 @@ export function ConfirmReservationContent({
 
     if (!agreeToTerms) {
       toast.error("Please acknowledge the reservation policy before confirming.");
+      return;
+    }
+
+    if (previewQuery.isError) {
+      toast.error("Unable to verify current availability. Please try again.");
+      return;
+    }
+
+    if (previewQuery.isFetching || !currentPreview) {
+      toast.error(
+        "Availability is still being checked. Please try again in a moment.",
+      );
+      return;
+    }
+
+    if (!currentPreview.available) {
+      toast.error(
+        "Those dates are no longer available. Choose a different pickup and return range before confirming.",
+      );
       return;
     }
 
@@ -191,15 +236,27 @@ export function ConfirmReservationContent({
 
         <div>
           <FareSummaryCard
-            dailyPrice={pricePerDay}
-            days={rentalDays}
-            totalPrice={totalPrice}
+            dailyPrice={currentPricePerDay}
+            days={currentRentalDays}
+            totalPrice={currentTotalPrice}
             agreeToTerms={agreeToTerms}
             onAgreeChange={setAgreeToTerms}
             onConfirm={handleReservation}
-            disabled={isSubmitting}
+            disabled={isSubmitting || availabilityIsInvalid}
             isLoading={isSubmitting}
           />
+          {availabilityMessage ? (
+            <p
+              role={previewQuery.isFetching ? "status" : "alert"}
+              className={
+                previewQuery.isFetching
+                  ? "mt-3 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+                  : "mt-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              }
+            >
+              {availabilityMessage}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

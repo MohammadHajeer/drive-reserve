@@ -4,6 +4,12 @@ export type ReservationPreviewInput = {
   returnDate: string;
 };
 
+export type UnavailableDateRange = {
+  from: Date;
+  to: Date;
+  isMine: boolean;
+};
+
 export type ReservationUnavailableReason =
   | "CAR_NOT_FOUND"
   | "CAR_NOT_AVAILABLE"

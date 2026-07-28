@@ -1,21 +1,14 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  addMonths,
-  endOfMonth,
-  startOfMonth,
-} from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { addMonths, endOfMonth, startOfMonth } from "date-fns";
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
-import type { ReservationPreview } from "@/lib/server/reservations/preview-reservation";
+import { useCarUnavailableRanges } from "@/features/reservations/hooks/use-car-unavailable-ranges";
+import { useReservationPreview } from "@/features/reservations/hooks/use-reservation-preview";
+import { useReservationRealtime } from "@/features/reservations/hooks/use-reservation-realtime";
+import type { ReservationPreview } from "@/features/reservations/reservation.types";
 import {
   addDaysToDateOnly,
   getBeirutDateOnly,
@@ -28,14 +21,7 @@ import {
 } from "@/lib/validations/reservation.validation";
 import type { Car } from "@/types/domain";
 
-import {
-  formatDateOnly,
-  parseDateOnly,
-  parseReservationPreview,
-  parseUnavailableRanges,
-  readErrorMessage,
-  type UnavailableDateRange,
-} from "./reservation-card.utils";
+import { formatDateOnly, parseDateOnly } from "./reservation-card.utils";
 
 const DESKTOP_CALENDAR_QUERY = "(min-width: 768px)";
 
@@ -88,36 +74,17 @@ export function useReservationCard({
   const router = useRouter();
   const [beirutToday, setBeirutToday] = useState(getBeirutDateOnly);
   const earliestPickupDate = useMemo(
-    () =>
-      parseDateOnly(addDaysToDateOnly(beirutToday, 1)) ??
-      new Date(),
+    () => parseDateOnly(addDaysToDateOnly(beirutToday, 1)) ?? new Date(),
     [beirutToday],
   );
-
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [displayedMonth, setDisplayedMonth] = useState(() =>
-    startOfMonth(
-      parseDateOnly(getEarliestPickupDateOnly()) ?? new Date(),
-    ),
+    startOfMonth(parseDateOnly(getEarliestPickupDateOnly()) ?? new Date()),
   );
   const [numberOfMonths, setNumberOfMonths] = useState(1);
   const [selectedRange, setSelectedRange] = useState<DateRange>();
-  const [unavailableRanges, setUnavailableRanges] = useState<
-    UnavailableDateRange[]
-  >([]);
-  const [loadState, setLoadState] = useState<CalendarLoadState>({
-    status: "loading",
-  });
-  const [retryAttempt, setRetryAttempt] = useState(0);
-  const [previewState, setPreviewState] = useState<PreviewState>({
-    status: "idle",
-  });
-  const [previewRetryAttempt, setPreviewRetryAttempt] = useState(0);
 
-  const rangeCache = useRef(
-    new Map<string, UnavailableDateRange[]>(),
-  );
-  const previewAbortController = useRef<AbortController | null>(null);
+  useReservationRealtime(carId);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -129,7 +96,6 @@ export function useReservationCard({
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_CALENDAR_QUERY);
-
     const updateNumberOfMonths = () => {
       setNumberOfMonths(mediaQuery.matches ? 2 : 1);
     };
@@ -142,110 +108,32 @@ export function useReservationCard({
     };
   }, []);
 
-  useEffect(() => {
+  const unavailableRangesInput = useMemo(() => {
     const from = startOfMonth(displayedMonth);
     const to = endOfMonth(addMonths(from, numberOfMonths - 1));
-    const cacheKey = [
+
+    return {
       carId,
-      formatDateOnly(from),
-      formatDateOnly(to),
-    ].join(":");
-    const cachedRanges = rangeCache.current.get(cacheKey);
-
-    if (cachedRanges) {
-      setUnavailableRanges(
-        Array.from(rangeCache.current.entries())
-          .filter(([key]) => key.startsWith(`${carId}:`))
-          .flatMap(([, ranges]) => ranges),
-      );
-      setLoadState({ status: "success" });
-      return;
-    }
-
-    const controller = new AbortController();
-    const searchParams = new URLSearchParams({
       from: formatDateOnly(from),
       to: formatDateOnly(to),
-    });
-
-    setLoadState({ status: "loading" });
-
-    async function loadUnavailableRanges() {
-      try {
-        const response = await fetch(
-          `/api/cars/${encodeURIComponent(
-            carId,
-          )}/unavailable-ranges?${searchParams.toString()}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new Error(
-            `Unable to load unavailable dates. The API route was not found or returned an invalid response (${response.status}).`,
-          );
-        }
-
-        const payload: unknown = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            readErrorMessage(payload) ??
-              "Unable to load unavailable dates. Please try again.",
-          );
-        }
-
-        const ranges = parseUnavailableRanges(payload);
-        rangeCache.current.set(cacheKey, ranges);
-
-        setUnavailableRanges(
-          Array.from(rangeCache.current.entries())
-            .filter(([key]) => key.startsWith(`${carId}:`))
-            .flatMap(([, cachedValue]) => cachedValue),
-        );
-        setLoadState({ status: "success" });
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        setLoadState({
-          status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Unable to load unavailable dates. Please try again.",
-        });
-      }
-    }
-
-    void loadUnavailableRanges();
-
-    return () => {
-      controller.abort();
     };
-  }, [
-    carId,
-    displayedMonth,
-    numberOfMonths,
-    retryAttempt,
-  ]);
-
-  const retryUnavailableRanges = useCallback(() => {
-    const from = startOfMonth(displayedMonth);
-    const to = endOfMonth(addMonths(from, numberOfMonths - 1));
-    const cacheKey = [
-      carId,
-      formatDateOnly(from),
-      formatDateOnly(to),
-    ].join(":");
-
-    rangeCache.current.delete(cacheKey);
-    setRetryAttempt((attempt) => attempt + 1);
   }, [carId, displayedMonth, numberOfMonths]);
+  const unavailableRangesQuery = useCarUnavailableRanges(
+    unavailableRangesInput,
+  );
+  const unavailableRanges = useMemo(
+    () => unavailableRangesQuery.data ?? [],
+    [unavailableRangesQuery.data],
+  );
+
+  const loadState: CalendarLoadState = unavailableRangesQuery.data
+    ? { status: "success" }
+    : unavailableRangesQuery.isError
+      ? {
+          status: "error",
+          message: unavailableRangesQuery.error.message,
+        }
+      : { status: "loading" };
 
   const pickupDate = selectedRange?.from
     ? formatDateOnly(selectedRange.from)
@@ -253,142 +141,58 @@ export function useReservationCard({
   const returnDate = selectedRange?.to
     ? formatDateOnly(selectedRange.to)
     : null;
+  const previewInput = useMemo<ReservationPreviewInput | null>(
+    () =>
+      pickupDate && returnDate
+        ? { carId, pickupDate, returnDate }
+        : null,
+    [carId, pickupDate, returnDate],
+  );
+  const dateError = previewInput
+    ? getReservationDateError(previewInput)
+    : null;
+  const previewQuery = useReservationPreview(
+    dateError ? null : previewInput,
+  );
+  const refetchReservationPreview = previewQuery.refetch;
 
-  useEffect(() => {
-    previewAbortController.current?.abort();
-
-    if (!pickupDate || !returnDate) {
-      return;
-    }
-
-    const requestBody = {
-      carId,
-      pickupDate,
-      returnDate,
-    } satisfies ReservationPreviewInput;
-    const dateError = getReservationDateError(requestBody);
-
-    if (dateError) {
-      const timeout = window.setTimeout(() => {
-        setPreviewState({ status: "error", message: dateError });
-      }, 0);
-
-      return () => window.clearTimeout(timeout);
-    }
-
-    const controller = new AbortController();
-    previewAbortController.current = controller;
-
-    async function loadReservationPreview() {
-      try {
-        const response = await fetch("/api/reservations/preview", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new Error(
-            `Unable to check availability. Server returned invalid response (${response.status}).`,
-          );
-        }
-
-        const payload: unknown = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            readErrorMessage(payload) ??
-              "Unable to check availability at the moment. Please try again.",
-          );
-        }
-
-        const preview = parseReservationPreview(payload);
-
-        if (
-          preview.carId !== carId ||
-          preview.pickupDate !== pickupDate ||
-          preview.returnDate !== returnDate
-        ) {
-          throw new Error(
-            "The reservation preview response was invalid.",
-          );
-        }
-
-        if (!controller.signal.aborted) {
-          setPreviewState({
-            status: "success",
-            preview,
-          });
-        }
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        setPreviewState({
-          status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Unable to check availability at the moment. Please try again.",
-        });
-      }
-    }
-
-    void loadReservationPreview();
-
-    return () => {
-      controller.abort();
-
-      if (previewAbortController.current === controller) {
-        previewAbortController.current = null;
-      }
-    };
-  }, [
-    beirutToday,
-    carId,
-    pickupDate,
-    previewRetryAttempt,
-    returnDate,
-  ]);
-
-  const retryReservationPreview = useCallback(() => {
-    previewAbortController.current?.abort();
-    setPreviewState({ status: "loading" });
-    setPreviewRetryAttempt((attempt) => attempt + 1);
-  }, []);
-
-  const handleRangeSelect = useCallback(
-    (range: DateRange | undefined) => {
-      previewAbortController.current?.abort();
-      setPreviewState(
-        range?.from && range.to
-          ? { status: "loading" }
-          : { status: "idle" },
-      );
-      setSelectedRange(range);
-
-      if (range?.from && range.to) {
-        setCalendarOpen(false);
-      }
-    },
-    [],
+  const previewState = useMemo<PreviewState>(
+    () =>
+      !previewInput
+        ? { status: "idle" }
+        : dateError
+          ? { status: "error", message: dateError }
+          : previewQuery.data
+            ? { status: "success", preview: previewQuery.data }
+            : previewQuery.isError
+              ? { status: "error", message: previewQuery.error.message }
+              : { status: "loading" },
+    [
+      dateError,
+      previewInput,
+      previewQuery.data,
+      previewQuery.error,
+      previewQuery.isError,
+    ],
   );
 
+  const retryReservationPreview = useCallback(() => {
+    void refetchReservationPreview();
+  }, [refetchReservationPreview]);
+
+  const handleRangeSelect = useCallback((range: DateRange | undefined) => {
+    setSelectedRange(range);
+
+    if (range?.from && range.to) {
+      setCalendarOpen(false);
+    }
+  }, []);
+
   const availablePreview =
-    previewState.status === "success" &&
-    previewState.preview.available
+    previewState.status === "success" && previewState.preview.available
       ? previewState.preview
       : null;
-
-  const displayedPricePerDay =
-    availablePreview?.pricePerDay ?? pricePerDay;
-
+  const displayedPricePerDay = availablePreview?.pricePerDay ?? pricePerDay;
   const hasPickupDate = selectedRange?.from !== undefined;
   const hasReturnDate = selectedRange?.to !== undefined;
   const hasCompleteRange = pickupDate !== null && returnDate !== null;
@@ -398,10 +202,7 @@ export function useReservationCard({
     const action = (
       kind: PrimaryActionKind,
       label: string,
-      options: {
-        disabled?: boolean;
-        loading?: boolean;
-      } = {},
+      options: { disabled?: boolean; loading?: boolean } = {},
     ) => ({
       kind,
       label,
@@ -410,11 +211,9 @@ export function useReservationCard({
     });
 
     if (!carIsGenerallyAvailable) {
-      return action(
-        "disabled",
-        "This car is currently unavailable",
-        { disabled: true },
-      );
+      return action("disabled", "This car is currently unavailable", {
+        disabled: true,
+      });
     }
 
     if (!hasPickupDate) {
@@ -425,53 +224,39 @@ export function useReservationCard({
       return action("open-calendar", "Select a return date");
     }
 
-    if (previewState.status === "loading") {
-      return action(
-        "disabled",
-        "Checking availability…",
-        {
-          disabled: true,
-          loading: true,
-        },
-      );
+    if (previewQuery.isFetching) {
+      return action("disabled", "Checking availability…", {
+        disabled: true,
+        loading: true,
+      });
     }
 
     if (previewState.status === "error") {
-      return action(
-        "retry-preview",
-        "Try availability check again",
-      );
+      return action("retry-preview", "Try availability check again");
     }
 
     if (
       previewState.status === "success" &&
       !previewState.preview.available
     ) {
-      return action(
-        "open-calendar",
-        "Choose different dates",
-      );
+      return action("open-calendar", "Choose different dates");
     }
 
     if (
       previewState.status === "success" &&
       previewState.preview.available
     ) {
-      return action(
-        "continue",
-        "Continue to confirmation",
-      );
+      return action("continue", "Continue to confirmation");
     }
 
-    return action(
-      "disabled",
-      "Checking selected dates…",
-      { disabled: true },
-    );
+    return action("disabled", "Checking selected dates…", {
+      disabled: true,
+    });
   }, [
     carIsGenerallyAvailable,
     hasPickupDate,
     hasReturnDate,
+    previewQuery.isFetching,
     previewState,
   ]);
 
@@ -486,18 +271,17 @@ export function useReservationCard({
         return;
 
       case "continue": {
-        if (!pickupDate || !returnDate) {
+        if (!pickupDate || !returnDate || previewQuery.isFetching) {
           return;
         }
 
-        const dateError = getReservationDateError({
+        const validationError = getReservationDateError({
           carId,
           pickupDate,
           returnDate,
         });
 
-        if (dateError) {
-          setPreviewState({ status: "error", message: dateError });
+        if (validationError) {
           setCalendarOpen(true);
           return;
         }
@@ -506,12 +290,9 @@ export function useReservationCard({
           pickup: pickupDate,
           return: returnDate,
         });
-
-        const targetUrl = `/cars/${encodeURIComponent(
-          carId,
-        )}/confirm-reservation?${searchParams.toString()}`;
-
-        router.push(targetUrl);
+        router.push(
+          `/cars/${encodeURIComponent(carId)}/confirm-reservation?${searchParams.toString()}`,
+        );
         return;
       }
 
@@ -521,6 +302,7 @@ export function useReservationCard({
   }, [
     carId,
     pickupDate,
+    previewQuery.isFetching,
     primaryAction.kind,
     retryReservationPreview,
     returnDate,
@@ -528,50 +310,29 @@ export function useReservationCard({
   ]);
 
   const allUnavailableRanges = useMemo(
-    () =>
-      unavailableRanges.map(({ from, to }) => ({
-        from,
-        to,
-      })),
+    () => unavailableRanges.map(({ from, to }) => ({ from, to })),
     [unavailableRanges],
   );
-
   const myReservationRanges = useMemo(
     () =>
       unavailableRanges
-        .filter(
-          (range) =>
-            range.isMine && range.to >= earliestPickupDate,
-        )
+        .filter((range) => range.isMine && range.to >= earliestPickupDate)
         .map((range) => ({
-          from:
-            range.from < earliestPickupDate
-              ? earliestPickupDate
-              : range.from,
+          from: range.from < earliestPickupDate ? earliestPickupDate : range.from,
           to: range.to,
         })),
     [earliestPickupDate, unavailableRanges],
   );
-
   const otherReservationRanges = useMemo(
     () =>
       unavailableRanges
-        .filter(
-          (range) =>
-            !range.isMine && range.to >= earliestPickupDate,
-        )
+        .filter((range) => !range.isMine && range.to >= earliestPickupDate)
         .map((range) => ({
-          from:
-            range.from < earliestPickupDate
-              ? earliestPickupDate
-              : range.from,
+          from: range.from < earliestPickupDate ? earliestPickupDate : range.from,
           to: range.to,
         })),
     [earliestPickupDate, unavailableRanges],
   );
-
-  const hasMyReservations =
-    myReservationRanges.length > 0;
 
   return {
     hasCompleteRange,
@@ -581,7 +342,6 @@ export function useReservationCard({
     primaryAction,
     handlePrimaryAction,
     retryReservationPreview,
-
     calendar: {
       open: calendarOpen,
       onOpenChange: setCalendarOpen,
@@ -592,15 +352,17 @@ export function useReservationCard({
       onRangeSelect: handleRangeSelect,
       earliestPickupDate,
       loadState,
-      onRetryUnavailableRanges:
-        retryUnavailableRanges,
+      onRetryUnavailableRanges: () => {
+        void unavailableRangesQuery.refetch();
+      },
       calendarIsUnavailable:
-        loadState.status !== "success" ||
+        unavailableRangesQuery.data === undefined ||
+        unavailableRangesQuery.isError ||
         !carIsGenerallyAvailable,
       allUnavailableRanges,
       myReservationRanges,
       otherReservationRanges,
-      hasMyReservations,
+      hasMyReservations: myReservationRanges.length > 0,
       maxRentalDays: MAX_RENTAL_DAYS,
     },
   };
