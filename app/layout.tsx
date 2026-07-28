@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -43,6 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={cn(
         "h-full font-sans antialiased",
@@ -50,9 +53,20 @@ export default function RootLayout({
         geistMono.variable,
       )}
     >
-      <body className="flex min-h-svh flex-col bg-background text-foreground">
-        <main>{children}</main>
-        <Toaster />
+      <body
+        className="flex min-h-svh flex-col bg-background text-foreground"
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <main>{children}</main>
+            <Toaster />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

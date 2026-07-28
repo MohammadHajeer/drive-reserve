@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { APP_ROUTES } from "@/lib/routes";
+
 export type AppRole = "customer" | "admin";
 
 /*
@@ -39,9 +41,9 @@ export const GUEST_ONLY_ROUTES = [
  * Only customers may access these routes.
  */
 export const CUSTOMER_ONLY_ROUTES = [
-  "/profile",
-  "/my-reservations",
-  "/reservations",
+  APP_ROUTES.customerProfile,
+  APP_ROUTES.customerReservations,
+  /^\/cars\/[^/]+\/confirm-reservation$/,
 ] as const;
 
 /*
@@ -49,17 +51,19 @@ export const CUSTOMER_ONLY_ROUTES = [
  */
 export const ADMIN_ONLY_ROUTES = ["/admin"] as const;
 
-export const LOGIN_ROUTE = "/login";
-export const CUSTOMER_HOME_ROUTE = "/cars";
-export const ADMIN_HOME_ROUTE = "/admin";
-export const UNAUTHORIZED_ROUTE = "/unauthorized";
+export const LOGIN_ROUTE = APP_ROUTES.login;
+export const CUSTOMER_HOME_ROUTE = APP_ROUTES.cars;
+export const ADMIN_HOME_ROUTE = APP_ROUTES.admin;
+export const UNAUTHORIZED_ROUTE = APP_ROUTES.unauthorized;
 
 export function matchesRoute(
   pathname: string,
-  routes: readonly string[],
+  routes: readonly (string | RegExp)[],
 ): boolean {
-  return routes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  return routes.some((route) =>
+    typeof route === "string"
+      ? pathname === route || pathname.startsWith(`${route}/`)
+      : route.test(pathname),
   );
 }
 
@@ -89,7 +93,7 @@ export function createLoginUrl(request: NextRequest) {
 
   const requestedPath = request.nextUrl.pathname + request.nextUrl.search;
 
-  loginUrl.searchParams.set("next", requestedPath);
+  loginUrl.searchParams.set("redirectTo", requestedPath);
 
   return loginUrl;
 }

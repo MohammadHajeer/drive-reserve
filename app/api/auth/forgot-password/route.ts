@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-
 import { createClient } from "@/lib/supabase/server";
 import { forgotPasswordSchema } from "@/lib/validations/auth.validation";
 
@@ -42,7 +41,6 @@ export async function POST(request: Request) {
     ).replace(/\/$/, "");
 
     const supabase = await createClient();
-
     const { error } = await supabase.auth.resetPasswordForEmail(
       parsed.data.email,
       {
@@ -67,6 +65,19 @@ export async function POST(request: Request) {
         );
       }
 
+      if (error.code === "user_not_found" || error.status === 404) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "USER_NOT_FOUND",
+              message: "No account exists for this email address.",
+            },
+          },
+          { status: 404 },
+        );
+      }
+
       return NextResponse.json(
         {
           success: false,
@@ -79,11 +90,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Keep this generic to avoid revealing whether the email exists.
     return NextResponse.json({
       success: true,
-      message:
-        "If an account exists for this email, a password reset link has been sent.",
+      message: "A password reset link has been sent. Check your inbox.",
     });
   } catch (error) {
     console.error("Forgot-password route error:", error);

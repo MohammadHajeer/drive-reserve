@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { registerSchema } from "@/lib/validations/auth.validation";
+import { registrationRequestSchema } from "@/lib/validations/auth.validation";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const parsed = registerSchema.safeParse(body);
+    const parsed = registrationRequestSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { fullName, email, phone, password } = parsed.data;
+    const { fullName, email, phone, password, redirectTo } = parsed.data;
 
     const supabase = await createClient();
 
@@ -46,11 +46,15 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
     ).replace(/\/$/, "");
 
+    const emailConfirmationUrl = new URL("/api/auth/confirm", `${siteUrl}/`);
+
+    emailConfirmationUrl.searchParams.set("redirectTo", redirectTo ?? "/cars");
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${siteUrl}/api/auth/confirm`,
+        emailRedirectTo: emailConfirmationUrl.toString(),
         data: {
           full_name: fullName,
           phone: phone || null,
@@ -105,13 +109,13 @@ export async function POST(request: Request) {
         success: true,
         data: {
           email,
-          requiresEmailVerification: data.session === null,
+          requiresEmailVerification: true,
         },
         message:
-          "Your account was created. Check your email to verify your account.",
+          "Check your email for a verification link. If you already have an account, sign in or reset your password.",
       },
       {
-        status: 201,
+        status: 200,
         headers: {
           "Cache-Control": "private, no-store",
         },
