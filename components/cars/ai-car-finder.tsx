@@ -10,7 +10,9 @@ import {
   Users,
 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
+import { requestAiCarRecommendations } from "@/lib/actions/ai-car-recommendations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,6 +84,7 @@ export function AiCarFinder() {
     register,
     control,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<AiCarFinderFormValues>({
     resolver: zodResolver(aiCarFinderSchema),
@@ -99,10 +102,30 @@ export function AiCarFinder() {
     reValidateMode: "onChange",
   });
 
-  function onSubmit(data: AiCarFinderFormValues) {
-    // Step 3 validates and normalizes the form only.
-    // The server request and OpenAI integration come next.
-    console.log("Validated AI car finder request:", data);
+  async function onSubmit(data: AiCarFinderFormValues) {
+    const result = await requestAiCarRecommendations(data);
+
+    if (!result.success) {
+      if (result.fieldErrors) {
+        for (const [field, message] of Object.entries(result.fieldErrors)) {
+          if (!message) continue;
+
+          setError(field as keyof AiCarFinderFormValues, {
+            type: "server",
+            message,
+          });
+        }
+      }
+
+      toast.error(result.message);
+      return;
+    }
+
+    // Temporary Step 5 verification.
+    // The candidate list stays public-safe and will be consumed by OpenAI
+    // on the server in the next step instead of being shown directly.
+    console.table(result.data.candidates);
+    toast.success(result.message);
   }
 
   return (
