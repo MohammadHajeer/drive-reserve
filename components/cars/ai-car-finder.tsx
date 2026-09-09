@@ -121,10 +121,14 @@ export function AiCarFinder() {
       return;
     }
 
-    // Temporary Step 5 verification.
-    // The candidate list stays public-safe and will be consumed by OpenAI
-    // on the server in the next step instead of being shown directly.
-    console.table(result.data.candidates);
+    // Temporary Step 6 verification. The final recommendation cards come next.
+    console.table(
+      result.data.recommendations.map((recommendation) => ({
+        car: `${recommendation.car.brand} ${recommendation.car.model}`,
+        label: recommendation.label,
+        reason: recommendation.reason,
+      })),
+    );
     toast.success(result.message);
   }
 

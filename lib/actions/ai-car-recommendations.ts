@@ -2,6 +2,10 @@
 
 import { getAiCarCandidates } from "@/lib/server/ai/get-ai-car-candidates";
 import {
+  recommendCarsWithOpenAI,
+  type AiCarRecommendation,
+} from "@/lib/server/ai/recommend-cars-with-openai";
+import {
   aiCarFinderSchema,
   type AiCarFinderFormValues,
 } from "@/lib/validations/ai-car-finder";
@@ -13,8 +17,7 @@ export type AiCarRecommendationActionResult =
       success: true;
       message: string;
       data: {
-        candidateCount: number;
-        candidates: Awaited<ReturnType<typeof getAiCarCandidates>>;
+        recommendations: AiCarRecommendation[];
       };
     }
   | {
@@ -42,8 +45,8 @@ function toFieldErrors(
 export async function requestAiCarRecommendations(
   input: unknown,
 ): Promise<AiCarRecommendationActionResult> {
-  // Client-side validation is only UX. Server Actions are callable from the
-  // client, so validate every value again before touching the database.
+  // Browser validation is UX only. Treat every Server Action argument as
+  // untrusted and validate it again before database or AI usage.
   const parsed = aiCarFinderSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -65,23 +68,35 @@ export async function requestAiCarRecommendations(
       };
     }
 
+    const recommendations = await recommendCarsWithOpenAI(
+      parsed.data,
+      candidates,
+    );
+
+    if (recommendations.length === 0) {
+      return {
+        success: false,
+        message:
+          "We couldn't produce a recommendation from the matching vehicles. Please try again.",
+      };
+    }
+
     return {
       success: true,
-      message: `Found ${candidates.length} ${
-        candidates.length === 1 ? "matching vehicle" : "matching vehicles"
+      message: `Generated ${recommendations.length} ${
+        recommendations.length === 1 ? "recommendation" : "recommendations"
       } for your trip.`,
       data: {
-        candidateCount: candidates.length,
-        candidates,
+        recommendations,
       },
     };
   } catch (error) {
-    console.error("AI car candidate filtering failed:", error);
+    console.error("AI car recommendation failed:", error);
 
     return {
       success: false,
       message:
-        "Unable to check matching vehicles right now. Please try again.",
+        "We couldn't generate AI recommendations right now. Please try again shortly.",
     };
   }
 }
