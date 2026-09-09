@@ -1,6 +1,9 @@
 "use server";
 
+import OpenAI from "openai";
+
 import { getAiCarCandidates } from "@/lib/server/ai/get-ai-car-candidates";
+import { checkAiCarRecommendationRateLimit } from "@/lib/server/ai/ai-rate-limit";
 import {
   recommendCarsWithOpenAI,
   type AiCarRecommendation,
@@ -42,6 +45,31 @@ function toFieldErrors(
   return fieldErrors;
 }
 
+function getFriendlyAiFailureMessage(error: unknown) {
+  if (error instanceof OpenAI.APIConnectionTimeoutError) {
+    return "The AI service took too long to respond. Please try again.";
+  }
+
+  if (error instanceof OpenAI.RateLimitError) {
+    return "The AI service is temporarily busy. Please try again shortly.";
+  }
+
+  if (error instanceof OpenAI.APIConnectionError) {
+    return "We couldn't reach the AI service. Please check your connection and try again.";
+  }
+
+  if (error instanceof OpenAI.AuthenticationError) {
+    // Do not expose configuration details such as keys to the browser.
+    return "AI recommendations are temporarily unavailable.";
+  }
+
+  if (error instanceof OpenAI.APIError) {
+    return "The AI service couldn't complete the recommendation. Please try again shortly.";
+  }
+
+  return "We couldn't generate AI recommendations right now. Please try again shortly.";
+}
+
 export async function requestAiCarRecommendations(
   input: unknown,
 ): Promise<AiCarRecommendationActionResult> {
@@ -54,6 +82,16 @@ export async function requestAiCarRecommendations(
       success: false,
       message: "Please review the trip details and try again.",
       fieldErrors: toFieldErrors(parsed.error.issues),
+    };
+  }
+
+  // Apply the limiter before database work and before an OpenAI request.
+  const rateLimit = await checkAiCarRecommendationRateLimit();
+
+  if (!rateLimit.allowed) {
+    return {
+      success: false,
+      message: `You've made several recommendation requests. Please wait ${rateLimit.retryAfterSeconds} seconds and try again.`,
     };
   }
 
@@ -91,12 +129,12 @@ export async function requestAiCarRecommendations(
       },
     };
   } catch (error) {
+    // Keep detailed diagnostics on the server only.
     console.error("AI car recommendation failed:", error);
 
     return {
       success: false,
-      message:
-        "We couldn't generate AI recommendations right now. Please try again shortly.",
+      message: getFriendlyAiFailureMessage(error),
     };
   }
 }

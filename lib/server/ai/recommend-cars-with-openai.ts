@@ -80,7 +80,9 @@ function validateAndHydrateRecommendations(
     const car = carsById.get(recommendation.carId);
 
     if (!car) {
-      throw new Error("AI recommended a car that was not in the candidate list.");
+      throw new Error(
+        "AI recommended a car that was not in the candidate list.",
+      );
     }
 
     if (seenIds.has(recommendation.carId)) {
