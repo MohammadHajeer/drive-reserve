@@ -12,7 +12,11 @@ import {
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { requestAiCarRecommendations } from "@/lib/actions/ai-car-recommendations";
+import {
+  requestAiCarRecommendations,
+  type AiCarRecommendationView,
+} from "@/lib/actions/ai-car-recommendations";
+import { AiCarRecommendations } from "@/components/cars/ai-car-recommendations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -78,6 +82,9 @@ const priorityOptions = [
 
 export function AiCarFinder() {
   const [open, setOpen] = useState(false);
+  const [recommendations, setRecommendations] = useState<
+    AiCarRecommendationView[]
+  >([]);
   const today = getTodayDateString();
 
   const {
@@ -121,22 +128,17 @@ export function AiCarFinder() {
       return;
     }
 
-    // Temporary Step 6 verification. The final recommendation cards come next.
-    console.table(
-      result.data.recommendations.map((recommendation) => ({
-        car: `${recommendation.car.brand} ${recommendation.car.model}`,
-        label: recommendation.label,
-        reason: recommendation.reason,
-      })),
-    );
+    setRecommendations(result.data.recommendations);
+    setOpen(false);
     toast.success(result.message);
   }
 
   return (
-    <section
-      aria-labelledby="ai-car-finder-heading"
-      className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card"
-    >
+    <div className="space-y-4">
+      <section
+        aria-labelledby="ai-car-finder-heading"
+        className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card"
+      >
       <div
         className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-primary"
         aria-hidden="true"
@@ -167,7 +169,7 @@ export function AiCarFinder() {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger className="shrink-0" render={<Button />}>
-            Find my car
+            {recommendations.length > 0 ? "Update preferences" : "Find my car"}
             <ArrowRight className="size-4" aria-hidden="true" />
           </DialogTrigger>
 
@@ -382,14 +384,20 @@ export function AiCarFinder() {
 
                 <Button type="submit" className="sm:min-w-40" disabled={isSubmitting}>
                   <Sparkles className="size-4" aria-hidden="true" />
-                  Find my best cars
+                  {isSubmitting ? "Finding matches..." : "Find my best cars"}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
-    </section>
+      </section>
+
+      <AiCarRecommendations
+        recommendations={recommendations}
+        onEditPreferences={() => setOpen(true)}
+      />
+    </div>
   );
 }
 

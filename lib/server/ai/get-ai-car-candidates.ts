@@ -4,11 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { AiCarFinderFormValues } from "@/lib/validations/ai-car-finder";
 
 /*
- * This is intentionally smaller than the complete cars row.
- * These are the only fields the recommendation feature needs.
+ * These are the fields needed by the recommendation pipeline.
  *
- * plate_number, timestamps, image storage paths, and other unrelated data are
- * deliberately excluded.
+ * presentation-only fields such as primaryImageUrl are never included in the
+ * model payload. plate_number, timestamps, customer data, and reservation
+ * details are not queried at all.
  */
 export type AiCarCandidate = {
   id: string;
@@ -22,6 +22,7 @@ export type AiCarCandidate = {
   year: number;
   features: string[];
   description: string | null;
+  primaryImageUrl: string | null;
 };
 
 export async function getAiCarCandidates(
@@ -31,13 +32,8 @@ export async function getAiCarCandidates(
   const requiredSeats = Number(input.passengers);
 
   /*
-   * First apply deterministic database filters.
-   *
-   * AI must never decide factual eligibility such as:
-   * - whether a car is active/available for booking
-   * - whether it has enough seats
-   * - whether it exceeds the user's hard budget
-   * - whether it matches an explicitly selected transmission/fuel type
+   * Hard eligibility remains deterministic.
+   * AI only ranks cars that survive these application/database rules.
    */
   let query = supabase
     .from("cars")
@@ -53,7 +49,12 @@ export async function getAiCarCandidates(
         fuel_type,
         year,
         features,
-        description
+        description,
+        car_images (
+          image_url,
+          is_primary,
+          display_order
+        )
       `,
     )
     .eq("status", "available")
@@ -80,11 +81,6 @@ export async function getAiCarCandidates(
     return [];
   }
 
-  /*
-   * Date availability remains a database responsibility.
-   * Reuse DriveReserve's existing is_car_available RPC instead of asking AI
-   * to infer availability or duplicating reservation-overlap rules here.
-   */
   const availabilityChecks = await Promise.all(
     cars.map(async (car) => {
       const { data: isAvailable, error: availabilityError } =
@@ -109,17 +105,35 @@ export async function getAiCarCandidates(
 
   return availabilityChecks
     .filter(({ isAvailable }) => isAvailable)
-    .map(({ car }) => ({
-      id: car.id,
-      brand: car.brand,
-      model: car.model,
-      category: car.category,
-      pricePerDay: Number(car.price_per_day),
-      seats: car.seats,
-      transmission: car.transmission,
-      fuelType: car.fuel_type,
-      year: car.year,
-      features: car.features ?? [],
-      description: car.description,
-    }));
+    .map(({ car }) => {
+      const images = Array.isArray(car.car_images)
+        ? [...car.car_images].sort(
+            (first, second) =>
+              Number(second.is_primary) - Number(first.is_primary) ||
+              first.display_order - second.display_order,
+          )
+        : [];
+
+      const primaryImagePath = images[0]?.image_url ?? null;
+      const primaryImageUrl = primaryImagePath
+        ? supabase.storage
+            .from("car-images")
+            .getPublicUrl(primaryImagePath).data.publicUrl
+        : null;
+
+      return {
+        id: car.id,
+        brand: car.brand,
+        model: car.model,
+        category: car.category,
+        pricePerDay: Number(car.price_per_day),
+        seats: car.seats,
+        transmission: car.transmission,
+        fuelType: car.fuel_type,
+        year: car.year,
+        features: car.features ?? [],
+        description: car.description,
+        primaryImageUrl,
+      };
+    });
 }

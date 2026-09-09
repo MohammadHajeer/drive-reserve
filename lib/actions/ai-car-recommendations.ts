@@ -4,10 +4,7 @@ import OpenAI from "openai";
 
 import { getAiCarCandidates } from "@/lib/server/ai/get-ai-car-candidates";
 import { checkAiCarRecommendationRateLimit } from "@/lib/server/ai/ai-rate-limit";
-import {
-  recommendCarsWithOpenAI,
-  type AiCarRecommendation,
-} from "@/lib/server/ai/recommend-cars-with-openai";
+import { recommendCarsWithOpenAI } from "@/lib/server/ai/recommend-cars-with-openai";
 import {
   aiCarFinderSchema,
   type AiCarFinderFormValues,
@@ -15,12 +12,34 @@ import {
 
 type FieldErrors = Partial<Record<keyof AiCarFinderFormValues, string>>;
 
+export type AiCarRecommendationView = {
+  car: {
+    id: string;
+    brand: string;
+    model: string;
+    category: string;
+    pricePerDay: number;
+    seats: number;
+    transmission: string;
+    fuelType: string;
+    year: number;
+    primaryImageUrl: string | null;
+  };
+  label:
+    | "Best overall match"
+    | "Best value"
+    | "Best for comfort"
+    | "Best for fuel efficiency"
+    | "Best newer option";
+  reason: string;
+};
+
 export type AiCarRecommendationActionResult =
   | {
       success: true;
       message: string;
       data: {
-        recommendations: AiCarRecommendation[];
+        recommendations: AiCarRecommendationView[];
       };
     }
   | {
@@ -59,7 +78,6 @@ function getFriendlyAiFailureMessage(error: unknown) {
   }
 
   if (error instanceof OpenAI.AuthenticationError) {
-    // Do not expose configuration details such as keys to the browser.
     return "AI recommendations are temporarily unavailable.";
   }
 
@@ -73,8 +91,6 @@ function getFriendlyAiFailureMessage(error: unknown) {
 export async function requestAiCarRecommendations(
   input: unknown,
 ): Promise<AiCarRecommendationActionResult> {
-  // Browser validation is UX only. Treat every Server Action argument as
-  // untrusted and validate it again before database or AI usage.
   const parsed = aiCarFinderSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -85,7 +101,6 @@ export async function requestAiCarRecommendations(
     };
   }
 
-  // Apply the limiter before database work and before an OpenAI request.
   const rateLimit = await checkAiCarRecommendationRateLimit();
 
   if (!rateLimit.allowed) {
@@ -119,17 +134,36 @@ export async function requestAiCarRecommendations(
       };
     }
 
+    const viewRecommendations: AiCarRecommendationView[] =
+      recommendations.map(({ car, label, reason }) => ({
+        car: {
+          id: car.id,
+          brand: car.brand,
+          model: car.model,
+          category: car.category,
+          pricePerDay: car.pricePerDay,
+          seats: car.seats,
+          transmission: car.transmission,
+          fuelType: car.fuelType,
+          year: car.year,
+          primaryImageUrl: car.primaryImageUrl,
+        },
+        label,
+        reason,
+      }));
+
     return {
       success: true,
-      message: `Generated ${recommendations.length} ${
-        recommendations.length === 1 ? "recommendation" : "recommendations"
+      message: `Generated ${viewRecommendations.length} ${
+        viewRecommendations.length === 1
+          ? "recommendation"
+          : "recommendations"
       } for your trip.`,
       data: {
-        recommendations,
+        recommendations: viewRecommendations,
       },
     };
   } catch (error) {
-    // Keep detailed diagnostics on the server only.
     console.error("AI car recommendation failed:", error);
 
     return {
