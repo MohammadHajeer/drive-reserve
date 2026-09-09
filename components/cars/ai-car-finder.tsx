@@ -5,18 +5,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowRight,
   CalendarDays,
+  Check,
   Gauge,
+  LoaderCircle,
   Sparkles,
   Users,
 } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import {
-  requestAiCarRecommendations,
-  type AiCarRecommendationView,
-} from "@/lib/actions/ai-car-recommendations";
 import { AiCarRecommendations } from "@/components/cars/ai-car-recommendations";
+import type {
+  AiCarRecommendationView,
+  AiRecommendationStatusEvent,
+} from "@/lib/ai/car-recommendations";
+import { streamAiCarRecommendations } from "@/lib/client/stream-ai-car-recommendations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -85,6 +88,9 @@ export function AiCarFinder() {
   const [recommendations, setRecommendations] = useState<
     AiCarRecommendationView[]
   >([]);
+  const [progressSteps, setProgressSteps] = useState<
+    AiRecommendationStatusEvent[]
+  >([]);
   const today = getTodayDateString();
 
   const {
@@ -110,11 +116,31 @@ export function AiCarFinder() {
   });
 
   async function onSubmit(data: AiCarFinderFormValues) {
-    const result = await requestAiCarRecommendations(data);
+    setProgressSteps([]);
 
-    if (!result.success) {
-      if (result.fieldErrors) {
-        for (const [field, message] of Object.entries(result.fieldErrors)) {
+    try {
+      const result = await streamAiCarRecommendations(data, {
+        onStatus(status) {
+          setProgressSteps((current) => {
+            const existingIndex = current.findIndex(
+              (item) => item.step === status.step,
+            );
+
+            if (existingIndex === -1) {
+              return [...current, status];
+            }
+
+            const next = [...current];
+            next[existingIndex] = status;
+            return next;
+          });
+        },
+      });
+
+      if (result.type === "validation_error") {
+        for (const [field, message] of Object.entries(
+          result.data.fieldErrors,
+        )) {
           if (!message) continue;
 
           setError(field as keyof AiCarFinderFormValues, {
@@ -122,15 +148,26 @@ export function AiCarFinder() {
             message,
           });
         }
+
+        toast.error(result.data.message);
+        return;
       }
 
-      toast.error(result.message);
-      return;
-    }
+      if (result.type === "error") {
+        toast.error(result.data.message);
+        return;
+      }
 
-    setRecommendations(result.data.recommendations);
-    setOpen(false);
-    toast.success(result.message);
+      setRecommendations(result.data.recommendations);
+      setOpen(false);
+      toast.success(result.data.message);
+    } catch {
+      toast.error(
+        "The recommendation connection was interrupted. Please try again.",
+      );
+    } finally {
+      setProgressSteps([]);
+    }
   }
 
   return (
@@ -377,6 +414,10 @@ export function AiCarFinder() {
                 )}
               </div>
 
+              {isSubmitting && progressSteps.length > 0 && (
+                <RecommendationProgress steps={progressSteps} />
+              )}
+
               <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs leading-5 text-muted-foreground">
                   Recommendations will only use vehicles from DriveReserve.
@@ -400,6 +441,67 @@ export function AiCarFinder() {
     </div>
   );
 }
+
+function RecommendationProgress({
+  steps,
+}: {
+  steps: AiRecommendationStatusEvent[];
+}) {
+  const activeIndex = steps.length - 1;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="rounded-xl border border-primary/15 bg-primary/4 p-4"
+    >
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Sparkles className="size-4 text-primary" aria-hidden="true" />
+        Finding your best matches
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {steps.map((step, index) => {
+          const completed = index < activeIndex;
+
+          return (
+            <div
+              key={step.step}
+              className="flex items-center gap-2.5 text-xs"
+            >
+              <span
+                className={
+                  completed
+                    ? "flex size-5 items-center justify-center rounded-full bg-primary/10 text-primary"
+                    : "flex size-5 items-center justify-center text-primary"
+                }
+              >
+                {completed ? (
+                  <Check className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <LoaderCircle
+                    className="size-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
+              </span>
+              <span
+                className={
+                  completed
+                    ? "text-muted-foreground"
+                    : "font-medium text-foreground"
+                }
+              >
+                {step.message}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 function FormField({
   label,

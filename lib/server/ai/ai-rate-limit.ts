@@ -17,8 +17,8 @@ function getHashedIdentifier(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-async function getRequestIdentifier() {
-  const requestHeaders = await headers();
+async function getRequestIdentifier(providedHeaders?: Headers) {
+  const requestHeaders = providedHeaders ?? (await headers());
 
   const forwardedFor = requestHeaders.get("x-forwarded-for");
   const forwardedIp = forwardedFor?.split(",")[0]?.trim();
@@ -41,11 +41,13 @@ function pruneExpiredEntries(now: number) {
   }
 }
 
-export async function checkAiCarRecommendationRateLimit() {
+export async function checkAiCarRecommendationRateLimit(
+  requestHeaders?: Headers,
+) {
   const now = Date.now();
   pruneExpiredEntries(now);
 
-  const key = await getRequestIdentifier();
+  const key = await getRequestIdentifier(requestHeaders);
   const current = requests.get(key);
 
   if (!current || current.resetAt <= now) {

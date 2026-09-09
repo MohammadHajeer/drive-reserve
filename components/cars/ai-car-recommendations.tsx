@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import type { AiCarRecommendationView } from "@/lib/actions/ai-car-recommendations";
+import type { AiCarRecommendationView } from "@/lib/ai/car-recommendations";
 import { cn } from "@/lib/utils";
 
 function titleCase(value: string) {
