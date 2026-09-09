@@ -93,7 +93,21 @@ export function CarsPageSkeleton() {
           <Skeleton className="h-11 w-full rounded-xl sm:w-72" />
         </header>
 
-        <div className="mt-7 grid min-w-0 gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <section className="mt-6 overflow-hidden rounded-2xl border bg-card" aria-hidden="true">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex min-w-0 items-start gap-4">
+              <Skeleton className="size-11 shrink-0 rounded-xl" />
+              <div className="min-w-0 space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-5 w-72 max-w-full" />
+                <Skeleton className="h-4 w-full max-w-xl sm:w-105" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-full shrink-0 rounded-lg sm:w-32" />
+          </div>
+        </section>
+
+        <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
           <aside className="hidden self-start rounded-xl border bg-card p-5 shadow-sm lg:block">
             <div className="space-y-6">
               <Skeleton className="h-5 w-24" />

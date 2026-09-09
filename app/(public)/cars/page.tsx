@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { AiCarFinder } from "@/components/cars/ai-car-finder";
 import { CarsFilters } from "@/components/cars/cars-filters";
 import { CarsGridSkeleton } from "@/components/cars/cars-loading-skeletons";
 import { CarsPageHeader } from "@/components/cars/cars-page-header";
@@ -50,6 +51,7 @@ export default async function CarsPage({
   return (
     <CarsPageLayout
       header={<CarsPageHeader filters={filters} />}
+      aiFinder={<AiCarFinder />}
       sidebar={
         <CarsFilters filters={filters} priceRangePromise={priceRangePromise} />
       }
