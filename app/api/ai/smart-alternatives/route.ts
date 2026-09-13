@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp } from "@/lib/ai/rate-limit";
 import { generateAlternativesBadges, smartAlternativesRequestSchema } from "@/lib/ai/smart-alternatives";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`smart-alternatives:${ip}`, 10, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: { code: "RATE_LIMITED", message: "Too many AI requests. Please wait a moment." } },
+        { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+      );
+    }
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json(
         { success: false, error: { code: "AI_NOT_CONFIGURED", message: "Missing GROQ_API_KEY" } },
