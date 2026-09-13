@@ -30,7 +30,7 @@ export const smartMatcherRequestSchema = z.object({
 export type SmartMatcherRequest = z.infer<typeof smartMatcherRequestSchema>;
 
 export const smartMatcherMatchSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   score: z.number().min(0).max(1),
   snippet: z.string().min(1).max(140),
   rank: z.number().int().min(1).optional(),

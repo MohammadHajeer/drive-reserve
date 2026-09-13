@@ -37,7 +37,7 @@ export const smartAlternativesRequestSchema = z.object({
 export type SmartAlternativesRequest = z.infer<typeof smartAlternativesRequestSchema>;
 
 export const smartAlternativesMatchSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   badge: z.string().min(5).max(140),
 });
 
