@@ -8,7 +8,7 @@ import { CarGallery } from "@/components/car-details/car-gallery";
 import { RelatedCarsSkeleton } from "@/components/car-details/car-details-loading-skeletons";
 import { CarSpecs } from "@/components/car-details/car-specs";
 import { ReservationCard } from "@/components/car-details/reservation-card";
-import { CarCard } from "@/components/cars/car-card";
+import { SmartAlternatives } from "@/components/ai/smart-alternatives";
 import { getPublicCarById } from "@/lib/server/cars/get-public-car-by-id";
 import { getRelatedCars } from "@/lib/server/cars/get-related-cars";
 
@@ -114,16 +114,21 @@ async function RelatedCars({ car }: { car: PublicCar }) {
     return null;
   }
 
+  // SQL fetches cars of same category, AI adds contextual badge per alternative
   return (
-    <section className="mx-auto mt-12 max-w-7xl">
-      <h2 className="mb-6 text-lg font-semibold text-foreground">
-        Related Cars
-      </h2>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {result.data.map((relatedCar) => (
-          <CarCard key={relatedCar.id} car={relatedCar} />
-        ))}
-      </div>
-    </section>
+    <SmartAlternatives
+      currentCar={{
+        id: car.id,
+        brand: car.brand,
+        model: car.model,
+        year: car.year,
+        category: car.category,
+        transmission: car.transmission,
+        fuelType: car.fuelType,
+        seats: car.seats,
+        pricePerDay: car.pricePerDay,
+      }}
+      relatedCars={result.data}
+    />
   );
 }

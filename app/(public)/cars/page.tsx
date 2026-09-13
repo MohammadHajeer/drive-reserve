@@ -5,7 +5,7 @@ import { CarsFilters } from "@/components/cars/cars-filters";
 import { CarsGridSkeleton } from "@/components/cars/cars-loading-skeletons";
 import { CarsPageHeader } from "@/components/cars/cars-page-header";
 import { CarsPageLayout } from "@/components/cars/cars-page-layout";
-import { CarsResults } from "@/components/cars/cars-results";
+import { SmartCarsResults } from "@/components/ai/smart-cars-results";
 import { CarsSearch } from "@/components/cars/cars-search";
 import { MobileCarsFilters } from "@/components/cars/mobile-cars-filters";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,10 +70,7 @@ export default async function CarsPage({
         />
       }
       results={
-        <Suspense
-          key={resultsKey}
-          fallback={<CarsGridSkeleton view={filters.view} />}
-        >
+        <Suspense fallback={<CarsGridSkeleton view={filters.view} />}>
           <CarsResultsSection
             page={filters.page}
             view={filters.view}
@@ -127,7 +124,7 @@ async function CarsResultsSection({
     : { ...emptyPagination, page };
 
   return (
-    <CarsResults
+    <SmartCarsResults
       cars={cars}
       pagination={pagination}
       view={view}

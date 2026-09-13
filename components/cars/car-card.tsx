@@ -22,6 +22,7 @@ type CarCardProps = {
   car: PublicCarListItem;
   view?: PublicCarView;
   variant?: CarCardVariant;
+  aiMatch?: { snippet: string; score: number } | null;
 };
 
 function titleCase(value: string) {
@@ -36,6 +37,7 @@ export function CarCard({
   car,
   view = "grid",
   variant = "listing",
+  aiMatch,
 }: CarCardProps) {
   const router = useRouter();
   const detailsHref = `/cars/${car.id}`;
@@ -70,6 +72,7 @@ export function CarCard({
           car={car}
           detailsHref={detailsHref}
           onNavigate={handleNavigate}
+          aiMatch={aiMatch}
         />
       ) : (
         <GridCardContent
@@ -77,6 +80,7 @@ export function CarCard({
           detailsHref={detailsHref}
           isFeatured={isFeatured}
           onNavigate={handleNavigate}
+          aiMatch={aiMatch}
         />
       )}
     </article>
@@ -146,12 +150,14 @@ type ListCardContentProps = {
   car: PublicCarListItem;
   detailsHref: string;
   onNavigate: (e: React.MouseEvent) => Promise<void>;
+  aiMatch?: { snippet: string; score: number } | null;
 };
 
 function ListCardContent({
   car,
   detailsHref,
   onNavigate,
+  aiMatch,
 }: ListCardContentProps) {
   return (
     <div className="grid min-w-0 md:min-h-67.5 lg:grid-cols-[minmax(0,1fr)_190px]">
@@ -200,6 +206,8 @@ function ListCardContent({
             layout="horizontal"
           />
         </dl>
+
+        {aiMatch && <AiCardBadge snippet={aiMatch.snippet} score={aiMatch.score} />}
 
         <div className="mt-auto hidden pt-5 lg:block">
           <a
@@ -271,6 +279,7 @@ type GridCardContentProps = {
   detailsHref: string;
   isFeatured: boolean;
   onNavigate: (e: React.MouseEvent) => Promise<void>;
+  aiMatch?: { snippet: string; score: number } | null;
 };
 
 function GridCardContent({
@@ -278,6 +287,7 @@ function GridCardContent({
   detailsHref,
   isFeatured,
   onNavigate,
+  aiMatch,
 }: GridCardContentProps) {
   const availability = titleCase(car.status);
 
@@ -342,6 +352,8 @@ function GridCardContent({
           value={titleCase(car.fuelType)}
         />
       </dl>
+
+      {aiMatch && <AiCardBadge snippet={aiMatch.snippet} score={aiMatch.score} />}
 
       {isFeatured ? (
         <div className="mt-auto border-t pt-4">
@@ -426,6 +438,32 @@ function CarSpecification({
       <dd className="mt-0.5 truncate text-[11px] font-medium" title={value}>
         {value}
       </dd>
+    </div>
+  );
+}
+
+function AiCardBadge({ snippet, score }: { snippet: string; score: number }) {
+  const pct = Math.round(score * 100);
+  const isTop = score >= 0.75;
+  return (
+    <div
+      className={
+        isTop
+          ? "mt-3 rounded-lg border border-primary/20 bg-primary/[0.06] px-2.5 py-2 text-left"
+          : "mt-3 rounded-lg border border-muted bg-muted/40 px-2.5 py-2 text-left"
+      }
+    >
+      <p
+        className={
+          isTop
+            ? "flex items-center gap-1.5 text-[11px] font-semibold text-primary"
+            : "flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"
+        }
+      >
+        <span aria-hidden="true">✨</span>
+        {isTop ? `AI Match • ${pct}% fit` : `Consider • ${pct}% fit`}
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-foreground/80">{snippet}</p>
     </div>
   );
 }
