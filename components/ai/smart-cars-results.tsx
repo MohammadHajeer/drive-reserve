@@ -130,8 +130,8 @@ export function SmartCarsResults({ cars, pagination, view, errorMessage }: CarsR
   }, [lastQuery]);
   const requestedSort = useMemo(() => {
     const q = lastQuery.toLowerCase();
-    if (q.includes("low to high price") || q.includes("cheap to expensive") || q.includes("lowest price") || (q.includes("low") && q.includes("price") && q.includes("to high"))) return "price-asc" as const;
-    if (q.includes("high to low price") || q.includes("expensive to cheap") || q.includes("highest price") || (q.includes("high") && q.includes("price") && q.includes("to low"))) return "price-desc" as const;
+    if (q.includes("low to high price") || q.includes("cheap to expensive") || q.includes("lowest price") || (q.includes("low") && q.includes("price"))) return "price-asc" as const;
+    if (q.includes("high to low price") || q.includes("expensive to cheap") || q.includes("highest price") || (q.includes("high") && q.includes("price"))) return "price-desc" as const;
     if (q.includes("alphabetical") || q.includes("a to z")) return "brand-asc" as const;
     if (q.includes("newest")) return "newest" as const;
     if (q.includes("year") && !q.includes("fuel")) return "year-desc" as const;
@@ -433,7 +433,10 @@ export function SmartCarsResults({ cars, pagination, view, errorMessage }: CarsR
         <>
           <div className={cn("grid min-w-0 gap-4", view === "grid" && "sm:grid-cols-2 xl:grid-cols-3", view === "list" && "grid-cols-1")}>
             {(() => {
-              const start = (pagination.page - 1) * pagination.limit;
+              const totalForPage = matches ? visibleCars.length : pagination.total;
+              const totalPagesForSlice = Math.max(1, Math.ceil(totalForPage / pagination.limit));
+              const clampedPage = Math.min(pagination.page, totalPagesForSlice);
+              const start = (clampedPage - 1) * pagination.limit;
               const pageCars = matches ? visibleCars.slice(start, start + pagination.limit) : visibleCars;
               return pageCars.map((car) => {
                 const m = matchMap?.get(car.id) ?? null;
